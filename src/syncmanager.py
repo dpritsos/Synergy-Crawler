@@ -9,12 +9,13 @@ Author: Dimitrios Pritsos
 Last update: 25.05.2010
 
 """
-from multiprocessing import Process, Pool, current_process, Manager, Value
+from multiprocessing import Process, Manager, Value
 from multiprocessing.managers import BaseManager
 #Import Web Crawlers element modules
 from syncscanner import SynCScanner
 from syncfetcher import SynCFetcher
 from synckeeper import  SynCKeeper
+from genreidentifier import GenreIdentifier
 import time
 
 QUEUESIZE = 5000
@@ -33,7 +34,9 @@ class SynCManager(Process):
         BUT THERE IS A PROBLEM WITH MANAGER PASSING VARIABLES --- NOT REALY GOOD IMPLEMETATION FOR MULTIPROCESSING"""
         self.syncqueuesmanager = Manager() #syncqueues    
         #Queue of tuples (HTML source, URL) to be saved 
-        self.keepersQ = self.syncqueuesmanager.Queue()
+        self.keepersQ = self.syncqueuesmanager.Queue(QUEUESIZE)
+        #Queue of tuples (HTML source, URL) to be saved to be analysed for Genre Identification of the Page 
+        self.genreIdentQ = self.syncqueuesmanager.Queue(QUEUESIZE)
         #List of Queues of tuples (HTML sources, Encoding) to be scanned for URLS - Not Share-able able to other Processes
         self.scannersQL = list()
         #Global Queue of tuples (HTML sources, Encoding) to be scanned
@@ -54,11 +57,13 @@ class SynCManager(Process):
         #List of SynCScanner Processes
         self.pscannersL = list()
         #List of SynCKeeper Processes
-        self.pkeepersL = list()         
+        self.pkeepersL = list()      
+        #List of GenreIdentifier Processes
+        self.pGenreIdentL = list()         
         """END PICE OF CODE HERE"""    
         #INITIALIZE AT LEAST ONE PROCESS of each PROCESS CLASS -- NOT FINALL STRATEGY
         #Start fetcher processes (at least one)
-        self.pfetchersL.append( SynCFetcher(self.fetchersQL[0], self.scannersQL[0], self.keepersQ) )
+        self.pfetchersL.append( SynCFetcher(self.fetchersQL[0], self.scannersQL[0], self.keepersQ, self.genreIdentQ) )
         self.pfetchersL[0].start()
         #Start scanner processes (at least one)
         self.pscannersL.append( SynCScanner(self.scannersQL[0], self.urlLQ) )
@@ -68,13 +73,18 @@ class SynCManager(Process):
         self.pkeepersL.append( SynCKeeper(self.keepersQ) )
         self.pkeepersL[0].start()
         self.pkeepersL[1].start()
+        #Start keeper processes (at least one)
+        #self.pGenreIdentL.append( GenreIdentifier(self.genreIdentQ) )
+        #self.pGenreIdentL[0].start()
         #var = self.urlLQ
         self.pFcount = Value("i")
         self.pScount = Value("i")
         self.pKcount = Value("i")
+        self.pGcount = Value("i")
         self.pFcount.value = 1
         self.pScount.value = 1
         self.pKcount.value = 2
+        self.pGcount.value = 1
         pSendtoMom = Process(target=self.__sendto_mom) #, args=(self.syncmother,self.urlLQ))
         pSendtoMom.start()
         pMonitoring = Process(target=self.__monitor_all) #args=(self.keepersQ, self.scannersQL, self.urlLQ, self.fetchersQL, self.pfetchersL, self.pscannersL, self.pkeepersL) )
@@ -98,6 +108,12 @@ class SynCManager(Process):
                 self.pkeepersL.append( SynCKeeper(self.keepersQ) )
                 self.pkeepersL[self.pKcount.value].start()
                 self.pKcount.value += 1
+            #The following code will actually used only in case of a Distributed ML algorithm or
+            #In case the Identification will execute per Site Domain (for all pages of a Site) and not per Page 
+            if self.genreIdentQ.qsize() > 50 and self.pGcount.value < 1:
+                self.pGenreIdentL.append( GenreIdentifier(self.genreIdentQ) )
+                self.pGenreIdentL[self.pGcount.value].start()
+                self.pGcount.value += 1
     def __get_n_dispatch(self):
         while True:
             #Get URLs list form SynCMother - Blocks until it gets the list
@@ -128,17 +144,19 @@ class SynCManager(Process):
                 #self.syncmother.release()
     def __monitor_all(self): #, keepersQ, scannersQL, urlLQ, fetchersQL, pfetchersL, pscannersL, pkeepersL):
         while True:
-            print "*****Monitoring Report*****"
-            print "keepersQ len:" + str( self.keepersQ.qsize() ) 
-            print "scannersQL len:" + str( len(self.scannersQL) )
-            print "scannersQ[0] size:" + str( self.scannersQL[0].qsize() )
-            print "urlLQ len:" + str( self.urlLQ.qsize() )
-            print "fetchersQL len:" + str( len(self.fetchersQL) )
-            print "fetchersQ[0] size:" + str( self.fetchersQL[0].qsize() )
-            print "pfetchersL Count:" + str( self.pFcount.value ) #len(self.pfetchersL) )
-            print "pscannersL Count:" + str( self.pScount.value ) #len(self.pscannersL) )
-            print "pkeepersL Count:" + str( self.pKcount.value )
-            print "\n\n\n"
+            print("*****Monitoring Report*****")
+            print("keepersQ len:" + str( self.keepersQ.qsize() ) ) 
+            print("scannersQL len:" + str( len(self.scannersQL) ) )
+            print("scannersQ[0] size:" + str( self.scannersQL[0].qsize() ) )
+            print("urlLQ len:" + str( self.urlLQ.qsize() ) )
+            print("fetchersQL len:" + str( len(self.fetchersQL) ) )
+            print("fetchersQ[0] size:" + str( self.fetchersQL[0].qsize() ) )
+            #print("genreIdentQ len:" + str( self.genreIdentQ.qsize() ) )
+            #print("pGenreIdentL Count:" + str( self.pGcount.value ) )
+            print("pfetchersL Count:" + str( self.pFcount.value ) ) #len(self.pfetchersL) )
+            print("pscannersL Count:" + str( self.pScount.value ) ) #len(self.pscannersL) )
+            print("pkeepersL Count:" + str( self.pKcount.value ) )
+            print("\n\n\n" )
             time.sleep(10)
         
 if __name__ == "__main__":
@@ -150,8 +168,8 @@ if __name__ == "__main__":
     syncmotherProxy = syncmotherObject.SynCMother()
     
     syncqueuesmanager = Manager()   
-    q = syncqueuesmanager.Queue()
-    print q
+    #q = syncqueuesmanager.Queue()
+    #print q
     pmanager = SynCManager(syncmotherProxy, syncqueuesmanager)
     pmanager.start() 
    

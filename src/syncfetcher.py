@@ -6,12 +6,13 @@ import urllib2
 class SynCFetcher(Process):
     """SynCFetcherProcess:"""
     PROCESSNUM = 0
-    def __init__(self, myPendingFetchQ, scannersQ, keepersQ):
+    def __init__(self, myPendingFetchQ, scannersQ, keepersQ, gidentQ):
         Process.__init__(self)
         SynCFetcher.PROCESSNUM += 1
         self.myPendingFetchQ = myPendingFetchQ
         self.scannersQ = scannersQ 
         self.keepersQ = keepersQ
+        #self.gidentQ = gidentQ #Added for enabling Genre Identification
         self.url = None
         self.headers = {
                         'User-Agent' : 'Mozilla/5.0 (X11; U; Linux x86_64; en-GB; rv:1.9.1.9)' 
@@ -22,13 +23,14 @@ class SynCFetcher(Process):
             self.url = self.myPendingFetchQ.get()
             #print "SynCFetcher Process with PID:%s and PCN:%s - Terminated (None...to do)" % (self.pid, SynCFetcher.PROCESSNUM)    
             if self.url == None:
-                print "SynCFetcher Process with PID:%s and PCN:%s - Terminated (None...to do)" % (self.pid, SynCFetcher.PROCESSNUM)
+                print( "SynCFetcher Process with PID:%s and PCN:%s - Terminated (None...to do)" % (self.pid, SynCFetcher.PROCESSNUM) )
                 SynCFetcher.PROCESSNUM -= 1
                 return
             htmlTuple = self._fetchsrc()
             #tmphtmlTuple = htmlTuple.next()
             self.scannersQ.put(htmlTuple)
-            self.keepersQ.put(htmlTuple)            
+            self.keepersQ.put(htmlTuple)
+            #self.gidentQ.put(htmlTuple) #Added for enabling Genre Identification       
     def _fetchsrc(self):
         htmlsrc = None
         socket = None

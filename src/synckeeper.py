@@ -18,7 +18,7 @@ class SynCKeeper(Process):
         while True:
             self.htmlSrcTuple = self.keepersQ.get()
             if self.htmlSrcTuple == None:
-                print "SynCKeeper Process with PID:%s and PCN:%s - Terminated (None...to do)" % (current_process().pid, SynCKeeper.PROCESSNUM)
+                print( "SynCKeeper Process with PID:%s and PCN:%s - Terminated (None...to do)" % (current_process().pid, SynCKeeper.PROCESSNUM) )
                 SynCKeeper.PROCESSNUM -= 1
                 return
             self._save_html_src()

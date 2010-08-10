@@ -191,7 +191,7 @@ class SynCMotherHandler(Process):
                 DUEliminatorsL.append( pDUE )
                 self.pDUECounter += 1
                 DUEliminatorsL[self.pDUECounter].start()
-                print "pDUECounter:" + str( self.pDUECounter + 1 )
+                print( "pDUECounter:" + str( self.pDUECounter + 1 ) )
     def __DUEliminator(self):
         print "RawQueueSize:" + str( self.synCMom.rawUrlsQ_qsize() )
         while True:
@@ -203,7 +203,7 @@ class SynCMotherHandler(Process):
                 self.synCMom.release()
     def __DUESavetofile(self):
         self.synCMom.acquire()
-        self.synCMom.setBase('1234', 'http', 'www.google.com')
+        self.synCMom.setBase('123', 'http', 'www.google.com')
         self.synCMom.notify_all()
         self.synCMom.release()
         while True:
@@ -285,7 +285,7 @@ if __name__ == "__main__":
     synCMotherHandler.join()
     #while True: pass 
         
-    print "End of Programme"
+    print("End of Programme")
   
 
 
