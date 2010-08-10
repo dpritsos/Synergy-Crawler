@@ -1,5 +1,5 @@
 """SynCFetcher: is the piece of code to build a concurrent HTML source fetching mechanism"""
-from multiprocessing import Process, current_process
+from multiprocessing import Process
 #importing urllib2 because urllib has been deprecated  
 import urllib2
                 
@@ -20,8 +20,9 @@ class SynCFetcher(Process):
         #print "SynCFetcher Process with PID:%s and PCN:%s - Engaged" % (current_process().pid, SynCFetcher.PROCESSNUM)
         while True:
             self.url = self.myPendingFetchQ.get()
+            #print "SynCFetcher Process with PID:%s and PCN:%s - Terminated (None...to do)" % (self.pid, SynCFetcher.PROCESSNUM)    
             if self.url == None:
-                print "SynCFetcher Process with PID:%s and PCN:%s - Terminated (None...to do)" % (current_process().pid, SynCFetcher.PROCESSNUM)
+                print "SynCFetcher Process with PID:%s and PCN:%s - Terminated (None...to do)" % (self.pid, SynCFetcher.PROCESSNUM)
                 SynCFetcher.PROCESSNUM -= 1
                 return
             htmlTuple = self._fetchsrc()

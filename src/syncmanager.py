@@ -17,7 +17,8 @@ from syncfetcher import SynCFetcher
 from synckeeper import  SynCKeeper
 import time
 
-QUEUESIZE = 200
+QUEUESIZE = 5000
+QUEUESIZE1 = 1800
 
                          # WHATS UP WITH THE MANAGER OBJECT AND THE PROXIES
                                    
@@ -27,8 +28,8 @@ class SynCManager(Process):
     def __init__(self, syncmotherProxy, syncqueuesmanager):
         Process.__init__(self)
         self.syncmother = syncmotherProxy
-    def run(self):    
-        """THIS FUCKING PICE OF CODE IT SHOULD ME AT __init__ 
+    def run(self):
+        """THIS FUCKING PICE OF CODE IT SHOULD BE AT __init__ 
         BUT THERE IS A PROBLEM WITH MANAGER PASSING VARIABLES --- NOT REALY GOOD IMPLEMETATION FOR MULTIPROCESSING"""
         self.syncqueuesmanager = Manager() #syncqueues    
         #Queue of tuples (HTML source, URL) to be saved 
@@ -41,7 +42,7 @@ class SynCManager(Process):
         self.scannersQL.append( self.syncqueuesmanager.Queue(QUEUESIZE) )
         #Queue of lists of URLs to be sent to SynCMother for Storage and UST (URL-seen)
         #i.e. SynCMother works as DUE (Duplicate URL eliminator) 
-        self.urlLQ = self.syncqueuesmanager.Queue()
+        self.urlLQ = self.syncqueuesmanager.Queue(QUEUESIZE1)
         #list of html queues - Not Share-able able to other Processes
         self.fetchersQL = list() 
         #The Global Queue of URLs to be downloaded
@@ -54,7 +55,7 @@ class SynCManager(Process):
         self.pscannersL = list()
         #List of SynCKeeper Processes
         self.pkeepersL = list()         
-        """END PICE OF CODE HERE"""
+        """END PICE OF CODE HERE"""    
         #INITIALIZE AT LEAST ONE PROCESS of each PROCESS CLASS -- NOT FINALL STRATEGY
         #Start fetcher processes (at least one)
         self.pfetchersL.append( SynCFetcher(self.fetchersQL[0], self.scannersQL[0], self.keepersQ) )
@@ -74,30 +75,30 @@ class SynCManager(Process):
         self.pFcount.value = 1
         self.pScount.value = 1
         self.pKcount.value = 2
-        pSendtoMom = Process(target=self._sendto_mom) #, args=(self.syncmother,self.urlLQ))
+        pSendtoMom = Process(target=self.__sendto_mom) #, args=(self.syncmother,self.urlLQ))
         pSendtoMom.start()
-        pMonitoring = Process(target=self._monitor_all) #args=(self.keepersQ, self.scannersQL, self.urlLQ, self.fetchersQL, self.pfetchersL, self.pscannersL, self.pkeepersL) )
+        pMonitoring = Process(target=self.__monitor_all) #args=(self.keepersQ, self.scannersQL, self.urlLQ, self.fetchersQL, self.pfetchersL, self.pscannersL, self.pkeepersL) )
         pMonitoring.start()
-        pGetnDispatch = Process(target=self._get_n_dispatch)
+        pGetnDispatch = Process(target=self.__get_n_dispatch)
         pGetnDispatch.start()
         while True:
-            if self.fetchersQL[0].qsize() > 50 and self.pFcount.value < 150:
+            if self.fetchersQL[0].qsize() > 50 and self.pFcount.value < 10:
                 #Start fetcher processes (at least one)
                 self.pfetchersL.append( SynCFetcher(self.fetchersQL[0], self.scannersQL[0], self.keepersQ) )
                 #self.pFcount.value += 1
                 self.pfetchersL[self.pFcount.value].start()
                 self.pFcount.value += 1
-            if self.scannersQL[0].qsize() > 50 and self.pScount.value < 50:
+            if self.scannersQL[0].qsize() > 50 and self.pScount.value < 10:
                 #Start scanner processes (at least one)
                 self.pscannersL.append( SynCScanner(self.scannersQL[0], self.urlLQ) )
                 #self.pScount.value += 1
                 self.pscannersL[self.pScount.value].start()
                 self.pScount.value += 1
-            if self.keepersQ.qsize() > 50 and self.pKcount.value < 50:
+            if self.keepersQ.qsize() > 50 and self.pKcount.value < 10:
                 self.pkeepersL.append( SynCKeeper(self.keepersQ) )
                 self.pkeepersL[self.pKcount.value].start()
                 self.pKcount.value += 1
-    def _get_n_dispatch(self):
+    def __get_n_dispatch(self):
         while True:
             #Get URLs list form SynCMother - Blocks until it gets the list
             #urlL = self._get_from_mom()
@@ -110,7 +111,7 @@ class SynCManager(Process):
             #for now just use a for and the global fetchers list
             for i in range(len(urlL)):
                 self.fetchersQL[0].put(urlL[i])
-    def _get_from_mom(self):
+    def __get_from_mom(self):
         #print "GET FROM MOM"
         self.syncmother.acquire()
         while self.syncmother.urls_pending() == False:
@@ -118,21 +119,14 @@ class SynCManager(Process):
         urlList = self.syncmother.get_urls()
         self.syncmother.release()
         return urlList
-    def _sendto_mom(self):
+    def __sendto_mom(self):
         while True:
             if self.urlLQ.empty() == False:
                 #self.syncmother.acquire()
                 self.syncmother.send_urls( self.urlLQ.get() )
                 #self.syncmother.notify_all()
                 #self.syncmother.release()
-    def _send_to_mom(self, var):
-        #print "SEND TO MOM"
-        self.syncmother.acquire()
-        var = self.urlLQ.get()
-        self.syncmother.send_urls( var )
-        self.syncmother.notify_all()
-        self.syncmother.release()
-    def _monitor_all(self): #, keepersQ, scannersQL, urlLQ, fetchersQL, pfetchersL, pscannersL, pkeepersL):
+    def __monitor_all(self): #, keepersQ, scannersQL, urlLQ, fetchersQL, pfetchersL, pscannersL, pkeepersL):
         while True:
             print "*****Monitoring Report*****"
             print "keepersQ len:" + str( self.keepersQ.qsize() ) 
