@@ -32,11 +32,11 @@ class SynCManager(Process):
     def run(self):
         """THIS FUCKING PICE OF CODE IT SHOULD BE AT __init__ 
         BUT THERE IS A PROBLEM WITH MANAGER PASSING VARIABLES --- NOT REALY GOOD IMPLEMETATION FOR MULTIPROCESSING"""
-        self.syncqueuesmanager = Manager() #syncqueues    
+        self.syncqueuesmanager = Manager() #syncqueues        
         #Queue of tuples (HTML source, URL) to be saved 
         self.keepersQ = self.syncqueuesmanager.Queue(QUEUESIZE)
         #Queue of tuples (HTML source, URL) to be saved to be analysed for Genre Identification of the Page 
-        self.genreIdentQ = self.syncqueuesmanager.Queue(QUEUESIZE)
+        self.genreidentQ = self.syncqueuesmanager.Queue(QUEUESIZE)
         #List of Queues of tuples (HTML sources, Encoding) to be scanned for URLS - Not Share-able able to other Processes
         self.scannersQL = list()
         #Global Queue of tuples (HTML sources, Encoding) to be scanned
@@ -63,7 +63,7 @@ class SynCManager(Process):
         """END PICE OF CODE HERE"""    
         #INITIALIZE AT LEAST ONE PROCESS of each PROCESS CLASS -- NOT FINALL STRATEGY
         #Start fetcher processes (at least one)
-        self.pfetchersL.append( SynCFetcher(self.fetchersQL[0], self.scannersQL[0], self.keepersQ, self.genreIdentQ) )
+        self.pfetchersL.append( SynCFetcher(self.fetchersQL[0], self.scannersQL[0], self.keepersQ, self.genreidentQ) )
         self.pfetchersL[0].start()
         #Start scanner processes (at least one)
         self.pscannersL.append( SynCScanner(self.scannersQL[0], self.urlLQ) )
@@ -74,8 +74,8 @@ class SynCManager(Process):
         self.pkeepersL[0].start()
         self.pkeepersL[1].start()
         #Start keeper processes (at least one)
-        #self.pGenreIdentL.append( GenreIdentifier(self.genreIdentQ) )
-        #self.pGenreIdentL[0].start()
+        self.pGenreIdentL.append( GenreIdentifier(self.genreidentQ) )
+        self.pGenreIdentL[0].start()
         #var = self.urlLQ
         self.pFcount = Value("i")
         self.pScount = Value("i")
@@ -94,7 +94,7 @@ class SynCManager(Process):
         while True:
             if self.fetchersQL[0].qsize() > 50 and self.pFcount.value < 10:
                 #Start fetcher processes (at least one)
-                self.pfetchersL.append( SynCFetcher(self.fetchersQL[0], self.scannersQL[0], self.keepersQ) )
+                self.pfetchersL.append( SynCFetcher(self.fetchersQL[0], self.scannersQL[0], self.keepersQ, self.genreidentQ) )
                 #self.pFcount.value += 1
                 self.pfetchersL[self.pFcount.value].start()
                 self.pFcount.value += 1
@@ -110,8 +110,8 @@ class SynCManager(Process):
                 self.pKcount.value += 1
             #The following code will actually used only in case of a Distributed ML algorithm or
             #In case the Identification will execute per Site Domain (for all pages of a Site) and not per Page 
-            if self.genreIdentQ.qsize() > 50 and self.pGcount.value < 1:
-                self.pGenreIdentL.append( GenreIdentifier(self.genreIdentQ) )
+            if self.genreidentQ.qsize() > 50 and self.pGcount.value < 1:
+                self.pGenreIdentL.append( GenreIdentifier(self.genreidentQ) )
                 self.pGenreIdentL[self.pGcount.value].start()
                 self.pGcount.value += 1
     def __get_n_dispatch(self):
@@ -151,8 +151,8 @@ class SynCManager(Process):
             print("urlLQ len:" + str( self.urlLQ.qsize() ) )
             print("fetchersQL len:" + str( len(self.fetchersQL) ) )
             print("fetchersQ[0] size:" + str( self.fetchersQL[0].qsize() ) )
-            #print("genreIdentQ len:" + str( self.genreIdentQ.qsize() ) )
-            #print("pGenreIdentL Count:" + str( self.pGcount.value ) )
+            print("genreIdentQ len:" + str( self.genreidentQ.qsize() ) )
+            print("pGenreIdentL Count:" + str( self.pGcount.value ) )
             print("pfetchersL Count:" + str( self.pFcount.value ) ) #len(self.pfetchersL) )
             print("pscannersL Count:" + str( self.pScount.value ) ) #len(self.pscannersL) )
             print("pkeepersL Count:" + str( self.pKcount.value ) )
