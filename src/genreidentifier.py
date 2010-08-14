@@ -1,6 +1,9 @@
 """
 """
 from multiprocessing import Process
+import re
+import numpy
+import scipy
 
 class GenreIdentifier(Process):
     def __init__(self, gIdent):
