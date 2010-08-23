@@ -32,7 +32,7 @@ class SynCKeeper(Process):
         urlres = urlparse.urlparse(url, "http")
         directory = urlres.netloc + urlres.path
         filename = urlres.netloc + "-" + str(gblcounter) + ".html"
-        filepn = "/home/dimitrios/Documents/" + filename
+        filepn = "/home/dimitrios/Documents/Synergy-Crawler/" + filename
         #print "Save:" + str(filepn)
         try:
             # This will create a new file or **overwrite an existing file**.

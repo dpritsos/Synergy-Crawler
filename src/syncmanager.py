@@ -63,16 +63,16 @@ class SynCManager(Process):
         """END PICE OF CODE HERE"""    
         #INITIALIZE AT LEAST ONE PROCESS of each PROCESS CLASS -- NOT FINALL STRATEGY
         #Start fetcher processes (at least one)
-        self.pfetchersL.append( SynCFetcher(self.fetchersQL[0], self.scannersQL[0], self.keepersQ, self.genreidentQ) )
+        self.pfetchersL.append( SynCFetcher(self.fetchersQL[0], self.scannersQL[0], self.genreidentQ) ) #, self.keepersQ) )
         self.pfetchersL[0].start()
         #Start scanner processes (at least one)
         self.pscannersL.append( SynCScanner(self.scannersQL[0], self.urlLQ) )
         self.pscannersL[0].start()
         #Start keeper processes (at least one)
-        self.pkeepersL.append( SynCKeeper(self.keepersQ) )
-        self.pkeepersL.append( SynCKeeper(self.keepersQ) )
-        self.pkeepersL[0].start()
-        self.pkeepersL[1].start()
+         #self.pkeepersL.append( SynCKeeper(self.keepersQ) )
+         #self.pkeepersL.append( SynCKeeper(self.keepersQ) )
+         #self.pkeepersL[0].start()
+         #self.pkeepersL[1].start()
         #Start keeper processes (at least one)
         self.pGenreIdentL.append( GenreIdentifier(self.genreidentQ) )
         self.pGenreIdentL[0].start()
@@ -94,7 +94,7 @@ class SynCManager(Process):
         while True:
             if self.fetchersQL[0].qsize() > 50 and self.pFcount.value < 10:
                 #Start fetcher processes (at least one)
-                self.pfetchersL.append( SynCFetcher(self.fetchersQL[0], self.scannersQL[0], self.keepersQ, self.genreidentQ) )
+                self.pfetchersL.append( SynCFetcher(self.fetchersQL[0], self.scannersQL[0], self.genreidentQ) ) #, self.keepersQ) )
                 #self.pFcount.value += 1
                 self.pfetchersL[self.pFcount.value].start()
                 self.pFcount.value += 1
@@ -145,7 +145,7 @@ class SynCManager(Process):
     def __monitor_all(self): #, keepersQ, scannersQL, urlLQ, fetchersQL, pfetchersL, pscannersL, pkeepersL):
         while True:
             print("*****Monitoring Report*****")
-            print("keepersQ len:" + str( self.keepersQ.qsize() ) ) 
+            #print("keepersQ len:" + str( self.keepersQ.qsize() ) ) 
             print("scannersQL len:" + str( len(self.scannersQL) ) )
             print("scannersQ[0] size:" + str( self.scannersQL[0].qsize() ) )
             print("urlLQ len:" + str( self.urlLQ.qsize() ) )
@@ -155,7 +155,7 @@ class SynCManager(Process):
             print("pGenreIdentL Count:" + str( self.pGcount.value ) )
             print("pfetchersL Count:" + str( self.pFcount.value ) ) #len(self.pfetchersL) )
             print("pscannersL Count:" + str( self.pScount.value ) ) #len(self.pscannersL) )
-            print("pkeepersL Count:" + str( self.pKcount.value ) )
+            #print("pkeepersL Count:" + str( self.pKcount.value ) )
             print("\n\n\n" )
             time.sleep(10)
         

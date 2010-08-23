@@ -6,13 +6,11 @@ import urllib2
 class SynCFetcher(Process):
     """SynCFetcherProcess:"""
     PROCESSNUM = 0
-    def __init__(self, myPendingFetchQ, scannersQ, keepersQ, genreidentQ):
+    def __init__(self, myPendingFetchQ, *sync_queues):
         Process.__init__(self)
         SynCFetcher.PROCESSNUM += 1
         self.myPendingFetchQ = myPendingFetchQ
-        self.scannersQ = scannersQ 
-        self.keepersQ = keepersQ
-        self.gidentQ = genreidentQ #Added for enabling Genre Identification
+        self.sync_queues = sync_queues 
         self.url = None
         self.headers = {
                         'User-Agent' : 'Mozilla/5.0 (X11; U; Linux x86_64; en-GB; rv:1.9.1.9)' 
@@ -28,9 +26,8 @@ class SynCFetcher(Process):
                 return
             htmlTuple = self.__fetchsrc()
             #tmphtmlTuple = htmlTuple.next()
-            self.scannersQ.put(htmlTuple)
-            self.keepersQ.put(htmlTuple)
-            self.gidentQ.put(htmlTuple) #Added for enabling Genre Identification       
+            for sync_queue in self.sync_queues:
+                sync_queue.put(htmlTuple)       
     def __fetchsrc(self):
         htmlsrc = None
         socket = None

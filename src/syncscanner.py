@@ -35,9 +35,10 @@ class SynCScanner(Process):
         while True:
             self.htmlSrcTuple = self.myPendingScanQ.get()
             if self.htmlSrcTuple == None:
-                print "SynCScanner Process with PID:%s and PCN:%s - Terminated (None...to do)" % (current_process().pid, SynCScanner.PROCESSNUM)
-                SynCScanner.PROCESSNUM -= 1
-                return
+                if SynCScanner.PROCESSNUM > 1:
+                    print "SynCScanner Process with PID:%s and PCN:%s - Terminated (None...to do)" % (current_process().pid, SynCScanner.PROCESSNUM)
+                    SynCScanner.PROCESSNUM -= 1
+                    return
             listURLs = self._extracturls()
             digestedURLsLL = self._url_hash(listURLs)
             self.urlLQ.put(digestedURLsLL)

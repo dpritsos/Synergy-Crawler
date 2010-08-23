@@ -30,7 +30,7 @@ class DUEUnit(object):
         if path:
             self.filespath = path
         else:
-            self.filespath = "/home/dimitrios/Documents/seen_urls/" 
+            self.filespath = "/home/dimitrios/Documents/Synergy-Crawler/seen_urls/" 
         self.filelist = list()
         self.conditonal_var = threading.Condition() 
     def ust(self, urls=None):
