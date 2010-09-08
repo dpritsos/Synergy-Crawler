@@ -29,7 +29,8 @@ class SynCScanner(Process):
         SynCScanner.PROCESSNUM += 1
         self.myPendingScanQ = myPendingScanQ
         self.urlLQ = urlLQ 
-        self.htmlSrcTuple = None               
+        self.htmlSrcTuple = None
+                       
     def run(self):
         #print "SynCScanner Process with PID:%s and PCN:%s - Engaged" % (current_process().pid, SynCScanner.PROCESSNUM)
         while True:
@@ -44,7 +45,8 @@ class SynCScanner(Process):
             self.urlLQ.put(digestedURLsLL)
             #self.urlLQ.put(self.listURLs)
             #print self.urlLQ.qsize()
-            #print "Extract URLs - END"                   
+            #print "Extract URLs - END"
+                               
     def _extracturls(self):
         #print "Extract URLs"
         urls = []
@@ -71,6 +73,7 @@ class SynCScanner(Process):
                     resulturls[i] = urlparse.urljoin(parenturl, resulturls[i])
                 urls.extend(resulturls)        
         return urls
+    
     def _url_hash(self, listURLs):
         digestedURLsLL = list()
         for i in xrange(len(listURLs)):#replacing range() for performance reasons 

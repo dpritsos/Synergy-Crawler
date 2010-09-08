@@ -8,11 +8,13 @@ import random
 class SynCKeeper(Process):
     """SynCFetcherProcess:"""
     PROCESSNUM = 0
+    
     def __init__(self, keepersQ):
         Process.__init__(self)
         SynCKeeper.PROCESSNUM += 1
         self.keepersQ = keepersQ 
-        self.htmlSrcTuple = None               
+        self.htmlSrcTuple = None 
+                      
     def run(self):
         #print "SynCKeeper Process with PID:%s and PCN:%s - Engaged" % (current_process().pid, SynCKeeper.PROCESSNUM)
         while True:
@@ -22,6 +24,7 @@ class SynCKeeper(Process):
                 SynCKeeper.PROCESSNUM -= 1
                 return
             self._save_html_src()
+            
     def _save_html_src(self):
         #print "In Save"
         gblcounter = random.randint(1, 99999999) 

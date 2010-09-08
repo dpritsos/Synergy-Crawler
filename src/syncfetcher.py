@@ -6,6 +6,7 @@ import urllib2
 class SynCFetcher(Process):
     """SynCFetcherProcess:"""
     PROCESSNUM = 0
+    
     def __init__(self, myPendingFetchQ, *sync_queues):
         Process.__init__(self)
         SynCFetcher.PROCESSNUM += 1
@@ -13,8 +14,9 @@ class SynCFetcher(Process):
         self.sync_queues = sync_queues 
         self.url = None
         self.headers = {
-                        'User-Agent' : 'Mozilla/5.0 (X11; U; Linux x86_64; en-GB; rv:1.9.1.9)' 
-                            }              
+                        'User-Agent' : 'Mozilla/5.0 (Linux X86; U; Debian SID; it; rv:1.9.0.1)' 
+                            }
+                      
     def run(self):
         #print "SynCFetcher Process with PID:%s and PCN:%s - Engaged" % (current_process().pid, SynCFetcher.PROCESSNUM)
         while True:
@@ -27,7 +29,8 @@ class SynCFetcher(Process):
             htmlTuple = self.__fetchsrc()
             #tmphtmlTuple = htmlTuple.next()
             for sync_queue in self.sync_queues:
-                sync_queue.put(htmlTuple)       
+                sync_queue.put(htmlTuple)
+                       
     def __fetchsrc(self):
         htmlsrc = None
         socket = None
@@ -35,8 +38,6 @@ class SynCFetcher(Process):
         try:
             rq = urllib2.Request(self.url, headers=self.headers)
             socket = urllib2.urlopen(rq)
-            #while not socket:
-            #    yield    
             htmlsrc = socket.read()
             charset = socket.info().getparam('charset')
             socket.close()
@@ -44,6 +45,7 @@ class SynCFetcher(Process):
             pass
         #Return a tuple of the HTML source, the character encoding of this source, and its URL 
         return (htmlsrc, charset, self.url)
+    
     def fetchsrc(self, url):
         """This is for external use... MAYBE it is USELESS"""
         #print "In fetch"

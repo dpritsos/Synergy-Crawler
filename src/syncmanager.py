@@ -26,9 +26,11 @@ QUEUESIZE1 = 1800
 class SynCManager(Process): 
     """SyncManagerProcess:""" 
     PROCESSNUM = 0
+    
     def __init__(self, syncmotherProxy, syncqueuesmanager):
         Process.__init__(self)
         self.syncmother = syncmotherProxy
+    
     def run(self):
         """THIS FUCKING PICE OF CODE IT SHOULD BE AT __init__ 
         BUT THERE IS A PROBLEM WITH MANAGER PASSING VARIABLES --- NOT REALY GOOD IMPLEMETATION FOR MULTIPROCESSING"""
@@ -114,6 +116,7 @@ class SynCManager(Process):
                 self.pGenreIdentL.append( GenreIdentifier(self.genreidentQ) )
                 self.pGenreIdentL[self.pGcount.value].start()
                 self.pGcount.value += 1
+    
     def __get_n_dispatch(self):
         while True:
             #Get URLs list form SynCMother - Blocks until it gets the list
@@ -127,6 +130,7 @@ class SynCManager(Process):
             #for now just use a for and the global fetchers list
             for i in range(len(urlL)):
                 self.fetchersQL[0].put(urlL[i])
+    
     def __get_from_mom(self):
         #print "GET FROM MOM"
         self.syncmother.acquire()
@@ -135,6 +139,7 @@ class SynCManager(Process):
         urlList = self.syncmother.get_urls()
         self.syncmother.release()
         return urlList
+    
     def __sendto_mom(self):
         while True:
             if self.urlLQ.empty() == False:
@@ -142,6 +147,7 @@ class SynCManager(Process):
                 self.syncmother.send_urls( self.urlLQ.get() )
                 #self.syncmother.notify_all()
                 #self.syncmother.release()
+    
     def __monitor_all(self): #, keepersQ, scannersQL, urlLQ, fetchersQL, pfetchersL, pscannersL, pkeepersL):
         while True:
             print("*****Monitoring Report*****")
@@ -158,6 +164,8 @@ class SynCManager(Process):
             #print("pkeepersL Count:" + str( self.pKcount.value ) )
             print("\n\n\n" )
             time.sleep(10)
+    
+    
         
 if __name__ == "__main__":
     class SynCMotherProxyManager(BaseManager): pass #Define the Manager Process   
