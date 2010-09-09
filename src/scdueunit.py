@@ -37,7 +37,7 @@ class DUEUnit(object):
         if isinstance(urls, str):
             url_hash = self.__url_hash(urls)
             if self.seen.has_key(url_hash):
-                print("FOUND IN SEEN LIST")
+                print("FOUND IN SEEN LIST: %s" % urls) ####################################### HERE????
                 return True
             else:
                 url_is_in_files = self.__ust_files(url_hash)
@@ -75,11 +75,12 @@ class DUEUnit(object):
             This function is recommended to be used externally from a process monitoring and handles the DUEUnit when 
             the crawler lacks of main memory. Currently the number of dictionary records are recommended to be used as criterion"""
         if not filename:
-            filename = str( self.base['url'] ) + "." + str( len(self.filelist) ) + ".seenurls"
+            strng = self.base_url['url'].rfind("http://")
+            filename =  str( strng ) + "." + str( len(self.filelist) ) + ".seenurls"
         try:
             f = open( self.filespath + filename, "w" ) 
             try:
-                header = "BASE URL: " + str( self.base['hashkey'] ) + " => " + str( self.base['protocol'] ) + "://" + str( self.base['url'] ) + "/\n"
+                header = "BASE URL: " + str( self.base_url['hashkey'] ) + " => " + str( self.base_url['url'] ) + "/\n"
                 print header
                 f.write(header.encode())
                 print header
@@ -98,7 +99,7 @@ class DUEUnit(object):
     def setBase(self, url):
         """This is required for Manager() object in multiprocessing in case is need to be used... I think!"""
         self.base_url = {'hashkey' : self.__url_hash(url),
-                     'url'     : url }
+                         'url'     : url }
         
     def __url_hash(self, url):
         """DUEUnit__url_hash(): 
@@ -110,13 +111,14 @@ class DUEUnit(object):
             hash = hashlib.md5()
             hash.update(url)
             #using hexdigest() and not digest() because we have to write the hash codes on utf8 files
-            return hash.hexdigest() 
+            hashkey = hash.hexdigest()
+            return hashkey 
         return None
     
     def __ust_files(self, url_hash=None):
         """DUEUnit.__ust_files: is performing URL Seen Test using history(URL seen) files"""
         if not self.filelist:
-            print("OUT FILE UST: NO FILES")
+            #print("OUT FILE UST: NO FILES")
             return False
         gpool = eventlet.GreenPool(10000)
         #Make url_hash key to an iteratable [ url_hash, url_hash, url_hash,...]

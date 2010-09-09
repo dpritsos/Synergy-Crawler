@@ -1,7 +1,8 @@
 """Synergy-Crawler Spider:"""
 import multiprocessing
-from multiprocessing import Process
-from eventlet.green import urllib2
+from multiprocessing import Pool, Process
+#from eventlet.green import urllib2
+import urllib2
 from threading import Thread
 import eventlet 
 import lxml.etree 
@@ -13,6 +14,22 @@ import hashlib
 
 from scdueunit import DUEUnit
 
+def ffetchsrc(url):
+    htmlsrc = None
+    socket = None
+    charset = None
+    try:
+        rq = urllib2.Request(url, headers={ 'User-Agent' : 'Mozilla/5.0 (X11; U; Linux x86_64; en-GB; rv:1.9.1.9)' })
+        socket = urllib2.urlopen(rq)
+        htmlsrc = socket.read()
+        charset = socket.info().getparam('charset')
+        socket.close()
+    except:
+        pass
+    #Return a tuple of the HTML source, the character encoding of this source, and its URL 
+    return (htmlsrc, charset, url)
+
+
 class SCSpider(Process): 
     """SCSpider:"""    
     Num = 0
@@ -20,6 +37,7 @@ class SCSpider(Process):
     def __init__(self, *sc_queues, **kwargs): 
         Process.__init__(self)
         SCSpider.Num += 1
+        self.pnum = SCSpider.Num 
         if sc_queues:
             self.scqs = sc_queues
         else:
@@ -31,7 +49,7 @@ class SCSpider(Process):
             self.headers = { 'User-Agent' : 'Mozilla/5.0 (X11; U; Linux x86_64; en-GB; rv:1.9.1.9)' }
         self.kill_evt = kwargs.pop("kill_evt", multiprocessing.Event().clear())
         self.urls_l = [ kwargs.pop("seed", None) ] 
-        print(self.urls_l[0])
+        print("NEW SPIDER: " + str(self.urls_l[0]))
         self.xtrees_q = kwargs.pop("xtrees_q", None)
         #ext_due_q is a Queue of URL Links for an External DUE-Unit 
         self.ext_url_q = kwargs.pop("ext_due_q", None) 
@@ -41,10 +59,11 @@ class SCSpider(Process):
         #Use the netloc (network locator) of the seed url as the base URL that this spider is working on
         url = urlparse(self.urls_l[0])
         hash = hashlib.md5()
-        hash.update(url.scheme + url.netloc)
+        hash.update(url.scheme + "://" + url.netloc)
         hashkey = hash.hexdigest()
-        self.due.setBase(url.scheme + url.netloc) 
+        self.due.setBase(url.scheme + "://" +url.netloc) 
         #Define 10000 Green Threads for fetching and lets see how it goes
+        #fetchers_p = Pool(10) #eventlet.GreenPool(10000)
         fetchers_p = eventlet.GreenPool(10000)
         #A thread is constantly checking the DUE seen dictionary is big enough to be saved on disk
         disk_keeper_thrd = Thread(target=self.savedue)
@@ -58,7 +77,7 @@ class SCSpider(Process):
         while True:
             #Checking for termination signal
             if self.kill_evt.is_set():
-                print("SCSpider Process (PID = %s - PCN = %s): Terminated" % (self.pid, SCSpider.Num))
+                print("SCSpider Process (PID = %s - PCN = %s): Terminated" % (self.pid, self.pnum))
                 SCSpider.Num -= 1
                 break
             #Get one of the URLs which an other SCSpider has left to the ext_due_p and append it to the urls_l
@@ -67,7 +86,8 @@ class SCSpider(Process):
             if ext_url:
                 self.urls_l.append(ext_url)
             #Start Processing WebPages (in fact sockets to them) which a Pool of GreenThreads is harvesting Asynchronously  
-            for page_soc in fetchers_p.imap(self.fetch, self.urls_l):
+            #for page_soc in fetchers_p.imap_unordered(ffetchsrc, self.urls_l):
+            for page_soc in fetchers_p.imap(self.fetchsrc, self.urls_l):
                 # ~~~~~~~~ Maybe the following code can be wrapped up from a few sub-Processes or Threads ~~~~~~~~~
                 parsing_errors = list()
                 try:           
@@ -87,26 +107,60 @@ class SCSpider(Process):
                             print("FUCKED-UP PAGE")
                             parsing_errors.append("BeautifullSoup Failed")
                             xhtml_t = lxml.etree.ElementTree(element=None)
+                            
+                            
+                            
                 #xhtml_t.make_links_absolute(self.due.base_url, resolve_base_href=True) #Maybe I don't need this because base_url argument in .parse()
                 tmp_urls_l = list()
-                xhtml_s = page_soc.read() #lxml.html.tostring(xhtml_t.getroot()
-                for link in lxml.html.document_fromstring( xhtml_s ).iterlinks(): #xhtml_t.iterlinks():
-                    parsed_u = urlparse(link[2])
-                    prsd_url = parsed_u.scheme + parsed_u.netloc
-                    if  prsd_url == self.due.base_url['url']:
-                        seen = self.ust(link[2])
-                        if not seen:
-                            tmp_urls_l.append(link[2])
-                        #else: means discarding this previously seen URL links
-                    else:
-                        #If the Base_urls is not the one this SCSpider is working on 
-                        #try to pass it the other SCSpider Processes
-                        if self.ext_url_q != None:
-                            self.ext_url_q.put(link[2])
-                        else: #if no one is expecting it
-                            seen = self.ust(link[2])
-                            if seen:
-                                tmp_urls_l.append(link[2])       
+                xhtml_s = page_soc[0] #lxml.html.tostring(xhtml_t.getroot()
+                charset = page_soc[1] #.info().getparam('charset')
+                if charset:
+                    try:
+                        xhtml_t = lxml.html.document_fromstring( str(xhtml_s.decode(charset)), base_url=self.due.base_url['url'] )
+                    except:
+                        print("SPIDER %d BASE %s" % (self.pnum, self.due.base_url['url']))
+                        print("FAULTY URL (encoding) : %s" % page_soc[2])
+                        return
+                else:
+                    try:
+                        xhtml_t = lxml.html.document_fromstring( str(xhtml_s), base_url=self.due.base_url['url'] )
+                    except:
+                        print("SPIDER %d BASE %s" % (self.pnum, self.due.base_url['url']))
+                        print("FAULTY URL : %s" % page_soc[2])
+                        return
+                    
+                print("SPIDER %d BASE %s" % (self.pnum, self.due.base_url['url']))
+                count = 0
+                print("BLOCKS HERE????")
+                #xhtml_t.make_links_absolute(self.due.base_url['url'], resolve_base_href=True)
+                for link in xhtml_t.iterlinks(): #xhtml_t.iterlinks():
+                    #print("SPIDER %s IS RUNNING" % self.pnum)
+                    #count += 1
+                    #print(count)
+                    #print(link)
+                    count += 1 
+                    #print("SPIDER %d count %s" % (self.pnum, count))
+                     
+                    if link[1] == 'href':
+                        if link[2].find(".css") == -1 or link[2].find(".jpg") == -1 or link[2].find(".gif") == -1 or link[2].find(".png") == -1:
+                            parsed_u = urlparse(link[2])
+                            prsd_url = str(parsed_u.scheme + "://" + parsed_u.netloc)
+                            if  prsd_url == self.due.base_url['url']:
+                                seen = self.ust(link[2])
+                                if not seen:
+                                    print("SPIDER %d APPEND_LINKS %s" % (self.pnum, count))
+                                    tmp_urls_l.append(link[2])
+                                #else: means discarding this previously seen URL links
+                            else:
+                                #If the Base_urls is not the one this SCSpider is working on 
+                                #try to pass it the other SCSpider Processes
+                                if self.ext_url_q != None:
+                                    #print("Sendto EXTERNAL LINKS: %s" % link[2])
+                                    self.ext_url_q.put(link[2])
+                                else: #if no one is expecting it
+                                    seen = self.ust(link[2])
+                                    if seen:
+                                        tmp_urls_l.append(link[2])       
                 #Put xhtml tree to other queue for "Intelligent" processing if any
                 #No need to send the urls found above, because in case this will be needed  
                 #lxml (i.e. libxml2 written in C/C++ ) will do the job quite fast. So, at least we same some memory
@@ -118,24 +172,25 @@ class SCSpider(Process):
                     sc_q.put({'xtree' : xhtml_t,
                               'parsing_errors' : parsing_errors})
             #Now give the new URLs List back to the Fetcher GreenThreads 
-            del self.urls_l
+            #del self.urls_l
             self.urls_l = tmp_urls_l
+            #del tmp_urls_l
         #If this Process has to be terminated wait for the Disk_keeper Thread to finish its job and join
         disk_keeper_thrd.join()
         
     def fetch(self, url):
-        print(self.headers)
-        print(url)
+        #print("IN FETCH: " + str(self.headers))
+        #print(url)
         rq = urllib2.Request(url, headers=self.headers)
         socket = urllib2.urlopen(rq)
         return socket
     
-    def fetchsrc(self):
+    def fetchsrc(self, url):
         htmlsrc = None
         socket = None
         charset = None
         try:
-            rq = urllib2.Request(self.url, headers=self.headers)
+            rq = urllib2.Request(url, headers=self.headers)
             socket = urllib2.urlopen(rq)
             htmlsrc = socket.read()
             charset = socket.info().getparam('charset')
@@ -143,20 +198,21 @@ class SCSpider(Process):
         except:
             pass
         #Return a tuple of the HTML source, the character encoding of this source, and its URL 
-        return (htmlsrc, charset, self.url)
+        return (htmlsrc, charset, url)
     
     def savedue(self):
         while True:
-            self.due.acquire()
-            while self.due.seen_len() <= 500:
-                self.due.wait()
+            #self.due.acquire()
+            while self.due.seen_len() <= 50:
+                pass #self.due.wait()
             self.due.savetofile()
-            self.due.notify_all()
-            self.due.release()
+            #self.due.notify_all()
+            #self.due.release()
             
     def ust(self, link):
         self.due.acquire()
-        self.due.ust(link)
+        seen = self.due.ust(link)
         self.due.notify_all()
         self.due.release()
+        return seen
 

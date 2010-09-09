@@ -36,10 +36,10 @@ class SCSmartQueue(object):
     def put(self, ext_url):
         parshed_u = urlparse(ext_url)
         hash = hashlib.md5()
-        hash.update(parshed_u.scheme + parshed_u.netloc)  
+        hash.update(parshed_u.scheme + "://" + parshed_u.netloc)  
         ext_baseurl_hash = hash.hexdigest() 
         if self.dict_qs.has_key(ext_baseurl_hash):
-            self.dict_qs[ext_baseurl_hash] = Queue()
+            #self.dict_qs[ext_baseurl_hash] = Queue()
             self.dict_qs[ext_baseurl_hash].put(ext_url)
         else:
             self.prospective_seeds.put(ext_url)
@@ -53,7 +53,7 @@ class SCSmartQueue(object):
     def putegg(self, url_seed):
         parshed_u = urlparse(url_seed)
         hash = hashlib.md5()
-        hash.update(parshed_u.scheme + parshed_u.netloc)  
+        hash.update(parshed_u.scheme + "://" + parshed_u.netloc)  
         new_hashkey = hash.hexdigest() 
         #Create a new Queue to the Queues Dictionary for the forthcoming Spider
         self.dict_qs[new_hashkey] = Queue()
@@ -74,6 +74,7 @@ class SCSpidermom(Process):
     def __init__(self, SCSmartQueue, SCSeedTree, **kwargs):
         Process.__init__(self)
         SCSpidermom.Num += 1
+        self.pnum = SCSpidermom.Num 
         self.smart_q = SCSmartQueue
         self.seedtree = SCSeedTree
         self.kill_evt = kwargs.pop("kill_evt", multiprocessing.Event().clear())
@@ -83,13 +84,17 @@ class SCSpidermom(Process):
         while True:
             #Checking for termination signal
             if self.kill_evt.is_set():
-                print("SCSpidermom Process (PID = %s - PCN = %s): Terminated" % (self.pid, SCSpidermom.Num))
+                print("SCSpidermom Process (PID = %s - PCN = %s): Terminated" % (self.pid, self.pnum))
                 SCSpidermom.Num -= 1
                 return
-            #If the prespective_seed is big enough that SCSpidermom happens to find it non-Empty then a new egg_fertilizer will start 
-            prospective_seed = self.smart_q.getpseed()
+            #If the prespective_seed is big enough that SCSpidermom happens to find it non-Empty then a new egg_fertilizer will start
+            if len(self.egg_fertillise_ps) < 10:
+                prospective_seed = self.smart_q.getpseed()
+            else:
+                prospective_seed = None
             if prospective_seed:
-                self.egg_fertillise_ps.append( Process(target=self.due, args=prospective_seed) )
+                print('PROSP_SEED: %s' % prospective_seed)
+                self.egg_fertillise_ps.append( Process(target=self.due, args=(prospective_seed,)) )
                 ef_i = len(self.egg_fertillise_ps) - 1
                 self.egg_fertillise_ps[ef_i].start()
         #In case this process is terminated then all the SubProcesses should terminate too
@@ -99,14 +104,15 @@ class SCSpidermom(Process):
     def due(self, prospective_seed):
         """due: Duplicate URL Elimination"""
         while prospective_seed:
-            seen = self.seedtree.ust(prospective_seed)
+            parshed_url = urlparse(prospective_seed)
+            base_url = parshed_url.scheme + "://" + parshed_url.netloc
+            ############### SHOUL I HAVE A LOCK HERE????????????
+            seen = self.seedtree.ust(base_url)
             if not seen:
                 self.smart_q.putegg(prospective_seed)
-        #Get next prospective seed to fertillise a SCSpider egg
-        prospective_seed = self.smart_q.getpseed()
+            #Get next prospective seed to fertillise a SCSpider egg
+            prospective_seed = self.smart_q.getpseed()
 
-        
-        
         
 """ OLD VERSION OF SPIDER MOM
 class SCSpidermom(Process):

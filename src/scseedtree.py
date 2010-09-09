@@ -27,6 +27,7 @@ class SCSeedTreeHandler(Process):
     def __init__(self, SCSeedTree, kill_evt ): 
         Process.__init__(self)
         SCSeedTreeHandler.Num += 1
+        self.pnum = SCSeedTreeHandler.Num 
         self.seedtree = SCSeedTree
         self.kill_evt = kill_evt
          
@@ -35,7 +36,7 @@ class SCSeedTreeHandler(Process):
         while True:
             #Checking for termination signal
             if self.kill_evt.is_set():
-                print("SCSeedTreeHandler Process (PID = %s - PCN = %s): Terminated" % (self.pid, SCSeedTreeHandler.Num))
+                print("SCSeedTreeHandler Process (PID = %s - PCN = %s): Terminated" % (self.pid, self.pnum))
                 SCSeedTreeHandler.Num -= 1
                 break
             #Get the SCSeedTree for a while and in case the the URL seen Dictionary 

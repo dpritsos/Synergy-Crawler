@@ -58,7 +58,6 @@ if __name__ == '__main__':
     scsq_m = SCSmartQueueManager()
     scsq_m.start()
     
-    
     # ~~~~ Bellow this line begins the WebCrawling strategy ~~~~
     
     #Get a Proxy to the SCSmartQueue instance to handle it through a Manager() Process (for the sake of InterProcess Communication)
@@ -66,7 +65,11 @@ if __name__ == '__main__':
     #Define the User-Agent HTTP header for bypassing Search Engines or other Sites prohibition
     user_agent = 'Mozilla/5.0 (X11; U; Linux 2.6.34.1-SquidSheep; en-US; rv:1.9.2.3) Gecko/20100402 Iceweasel/3.6.3 (like Firefox/3.6.3)'
     #Define the Seed to Give to the First(born) SCSpider Process to start WebCrawling
-    Gseed = "http://www.yahoo.com" #"http://www.google.gr/search?q=google&hl=el&client=firefox-a&hs=ksj&rls=com.ubuntu:en-GB:official&prmd=n&source=lnms&tbs=nws:1&ei=hhUuTPeRJML58Aa-_-C7Aw&sa=X&oi=mode_link&ct=mode&ved=0CBIQ_AU"
+    Gseed = "http://www.insomnia.gr"
+    #Gseed = "http://www.blogy.com"
+    #Gseed = "http://www.yahoo.com" 
+    #Gseed ="http://www.google.gr/search?q=google&hl=el&client=firefox-a&hs=ksj&rls=com.ubuntu:en-GB:official&prmd=n&source=lnms&tbs=nws:1&ei=hhUuTPeRJML58Aa-_-C7Aw&sa=X&oi=mode_link&ct=mode&ved=0CBIQ_AU"
+    
     #Manger process for InterProcess Event() and Simple Queue()
     m = Manager()
     #m.start() no need for this for a default manager
@@ -84,10 +87,13 @@ if __name__ == '__main__':
     scspidermom_p = SCSpidermom(scsmart_q, scseed_t, kill_evt=killall_evt)
     scspidermom_p.start()
     
-    #Start the very first SCSpider
+    #Create the first Queue for the very first SCSpider Process
+    scsmart_q.put(Gseed)
+    
+    #~~~~~~~~~~~~~~~Start the very first SCSpider
     scspider_ps = list()
-    scspider_ps.append( SCSpider(seed=Gseed, kill_evt=killall_evt, ext_due_q=scsmart_q, spider_spoof_id=user_agent) )
-    scspider_ps[0].start()
+    #scspider_ps.append( SCSpider(seed=Gseed, kill_evt=killall_evt, ext_due_q=scsmart_q, spider_spoof_id=user_agent) )
+    #scspider_ps[0].start()
     
     terminate = False #Temporarily Here !!!
     
@@ -96,6 +102,12 @@ if __name__ == '__main__':
         if terminate:
             killall_evt.set()
             break
+        if new_seed:
+            print("NEW SPIDER")
+            scspider_ps.append( SCSpider(seed=new_seed, kill_evt=killall_evt, ext_due_q=scsmart_q, spider_spoof_id=user_agent) )
+            scsp_i = len(scspider_ps) - 1
+            scspider_ps[scsp_i].start()
+        new_seed = scsmart_q.popegg()
     
     #Try to end properly this Process and its SubProcesses   
     for scspider in scspider_ps:
