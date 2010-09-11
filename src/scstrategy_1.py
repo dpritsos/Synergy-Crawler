@@ -64,7 +64,7 @@ if __name__ == '__main__':
     scsmart_q = scsq_m.SCSmartQueue()
     #Define the User-Agent HTTP header for bypassing Search Engines or other Sites prohibition
     user_agent = 'Mozilla/5.0 (X11; U; Linux 2.6.34.1-SquidSheep; en-US; rv:1.9.2.3) Gecko/20100402 Iceweasel/3.6.3 (like Firefox/3.6.3)'
-    #Define the Seed to Give to the First(born) SCSpider Process to start WebCrawling
+    #Gseed = "http://www.alpamayopro.gr"
     Gseed = "http://www.insomnia.gr"
     #Gseed = "http://www.blogy.com"
     #Gseed = "http://www.yahoo.com" 

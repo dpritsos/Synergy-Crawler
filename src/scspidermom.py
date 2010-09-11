@@ -5,7 +5,8 @@
 from multiprocessing import Process, Manager, Value
 from multiprocessing.managers import BaseManager
 import multiprocessing
-from threading import Thread 
+from threading import Thread
+import threading 
 from collections import deque
 from Queue import Queue
 import hashlib
@@ -23,9 +24,16 @@ class SCSmartQueue(object):
         self.dict_qs = dict()
         self.prospective_seeds = Queue() 
         self.eggs_q = deque()
+        ############################ MAYBE I SHOULD MOVE LOCKS ANYWAY!!!
+        self.dict_con_var = threading.Condition()
     
-    def get(self, base_hash, wait_time):        
-        q = self.dict_qs.pop(base_hash, None)
+    def get(self, base_hash, wait_time):
+        if self.dict_con_var.acquire(False):        
+            q = self.dict_qs.pop(base_hash, None)
+            self.dict_con_var.notify_all()
+            self.dict_con_var.release()
+        else:
+            return None
         if q == None:
             return None
         try: # check if it is empty or times out 
@@ -37,12 +45,15 @@ class SCSmartQueue(object):
         parshed_u = urlparse(ext_url)
         hash = hashlib.md5()
         hash.update(parshed_u.scheme + "://" + parshed_u.netloc)  
-        ext_baseurl_hash = hash.hexdigest() 
+        ext_baseurl_hash = hash.hexdigest()
+        self.dict_con_var.acquire() 
         if self.dict_qs.has_key(ext_baseurl_hash):
             #self.dict_qs[ext_baseurl_hash] = Queue()
             self.dict_qs[ext_baseurl_hash].put(ext_url)
         else:
             self.prospective_seeds.put(ext_url)
+        self.dict_con_var.notify_all()
+        self.dict_con_var.release()
     
     def getpseed(self):
         try:
@@ -56,7 +67,10 @@ class SCSmartQueue(object):
         hash.update(parshed_u.scheme + "://" + parshed_u.netloc)  
         new_hashkey = hash.hexdigest() 
         #Create a new Queue to the Queues Dictionary for the forthcoming Spider
+        self.dict_con_var.acquire()
         self.dict_qs[new_hashkey] = Queue()
+        self.dict_con_var.notify_all()
+        self.dict_con_var.release()
         #Update the eggs Queue for a new spider to emerge
         self.eggs_q.appendleft(url_seed)
         
@@ -88,7 +102,7 @@ class SCSpidermom(Process):
                 SCSpidermom.Num -= 1
                 return
             #If the prespective_seed is big enough that SCSpidermom happens to find it non-Empty then a new egg_fertilizer will start
-            if len(self.egg_fertillise_ps) < 10:
+            if len(self.egg_fertillise_ps) < 400:
                 prospective_seed = self.smart_q.getpseed()
             else:
                 prospective_seed = None
@@ -106,13 +120,14 @@ class SCSpidermom(Process):
         while prospective_seed:
             parshed_url = urlparse(prospective_seed)
             base_url = parshed_url.scheme + "://" + parshed_url.netloc
-            ############### SHOUL I HAVE A LOCK HERE????????????
+            self.seedtree.acquire()
             seen = self.seedtree.ust(base_url)
+            self.seedtree.notify_all()
+            self.seedtree.release()
             if not seen:
                 self.smart_q.putegg(prospective_seed)
             #Get next prospective seed to fertillise a SCSpider egg
             prospective_seed = self.smart_q.getpseed()
-
         
 """ OLD VERSION OF SPIDER MOM
 class SCSpidermom(Process):

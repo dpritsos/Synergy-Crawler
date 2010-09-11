@@ -33,6 +33,7 @@ class SCSeedTreeHandler(Process):
          
     def run(self):
         #This Process is constantly checking the DUE seen dictionary is big enough to be saved on disk
+        filenum = 0
         while True:
             #Checking for termination signal
             if self.kill_evt.is_set():
@@ -44,9 +45,14 @@ class SCSeedTreeHandler(Process):
             #otherwise suspend (thanx to Conditional Variable defined in the DUEUnit Class object
             self.seedtree.acquire()
             while self.seedtree.seen_len() <= 500:
+                print("SEED TREE SEEN LIST_LEN %s" % self.seedtree.seen_len())
                 self.seedtree.wait()
-            self.seedtree.savetofile()
-            self.seedtree.notify_all()
+            filenum += 1
+            file_name = "Visited_WebSite_List." + str(filenum)
+            #self.kill_evt.set()
+            self.seedtree.savetofile( file_name , file_headers=False)
+            #self.seedtree.savetofile("Visited_WebSite_List" )
+            #self.seedtree.notify_all()
             self.seedtree.release()
 
 
@@ -58,7 +64,7 @@ class SCSeedTree(DUEUnit):
     def __init__(self):
         DUEUnit.__init__(self)
         #Set the Base_url Here will be used only as file_names
-        self.setBase("Visited_WebSite_List")
+        #self.setBase("Visited_WebSite_List")
         #self.egg_seed_q = Queue()
         #if seed_url:
         #    parsed_u = urlparse(seed_url)

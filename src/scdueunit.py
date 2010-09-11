@@ -9,7 +9,7 @@ import threading
 from threading import Thread 
 import eventlet
 import hashlib
-import urlparse
+from urlparse import urlparse
 
 class DUEUnit(object):
     """DUE: 
@@ -37,7 +37,7 @@ class DUEUnit(object):
         if isinstance(urls, str):
             url_hash = self.__url_hash(urls)
             if self.seen.has_key(url_hash):
-                print("FOUND IN SEEN LIST: %s" % urls) ####################################### HERE????
+                #print("FOUND IN SEEN LIST: %s" % urls) ####################################### HERE????
                 return True
             else:
                 url_is_in_files = self.__ust_files(url_hash)
@@ -70,20 +70,20 @@ class DUEUnit(object):
         else:
             return None #Maybe this should be changed by raising an exception
         
-    def savetofile(self, filename=None):
+    def savetofile(self, filename=None, file_headers=True):
         """savetofile(): Stores the whole hash-url dictionary on hard disk. 
             This function is recommended to be used externally from a process monitoring and handles the DUEUnit when 
             the crawler lacks of main memory. Currently the number of dictionary records are recommended to be used as criterion"""
         if not filename:
-            strng = self.base_url['url'].rfind("http://")
-            filename =  str( strng ) + "." + str( len(self.filelist) ) + ".seenurls"
+            filename =  str( urlparse(self.base_url['url'] ).netloc ) + "." + str( len(self.filelist) ) + ".seenurls"
         try:
             f = open( self.filespath + filename, "w" ) 
             try:
-                header = "BASE URL: " + str( self.base_url['hashkey'] ) + " => " + str( self.base_url['url'] ) + "/\n"
-                print header
-                f.write(header.encode())
-                print header
+                if file_headers:
+                    header = "BASE URL: " + str( self.base_url['hashkey'] ) + " => " + str( self.base_url['url'] ) + "/\n"
+                    print header
+                    f.write(header.encode())
+                    print header
                 lines = [ str(hash) + " => " + str(url) + "\n" for hash, url in self.seen.items()] 
                 for line in lines:
                     f.write(line.encode()) # Write a string to a file
