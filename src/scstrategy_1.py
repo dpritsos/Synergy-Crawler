@@ -102,8 +102,28 @@ if __name__ == '__main__':
         if terminate:
             killall_evt.set()
             break
+        for scspider in scspider_ps:
+            #if scspider.is_alive():
+            #    pass
+                #line = "SPIDER %d : IS_ALIVE\n" % (scspider_ps.index(scspider) + 1)
+                #print(line)
+            if not scspider.is_alive():
+                scspider.join(5)
+                scspider_ps.remove(scspider)
+                line = "SPIDER %d : DEAD - JOIN\n" % (scspider_ps.index(scspider) + 1)
+                print(line)
+            if not scspider.is_alive():
+                scspider.terminate()
+                scspider_ps.remove(scspider)
+                line = "SPIDER %d : DEAD - TERMINATE\n" % (scspider_ps.index(scspider) + 1)
+                print(line)
+        if len(scspider_ps) > 200:
+            #Just Kill Some Eggs - SORRY ABOUT THAT
+            for i in xrange(10000):
+                scsmart_q.popegg(kill_eggs=True)
+            continue
         if new_seed:
-            print("NEW SPIDER")
+            print("NEW SPIDER %d with BASE_URL: %s" % ((len(scspider_ps) + 1), new_seed))
             scspider_ps.append( SCSpider(seed=new_seed, kill_evt=killall_evt, ext_due_q=scsmart_q, spider_spoof_id=user_agent) )
             scsp_i = len(scspider_ps) - 1
             scspider_ps[scsp_i].start()

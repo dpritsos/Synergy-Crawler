@@ -22,18 +22,18 @@ class SCSmartQueue(object):
     
     def __init__(self):
         self.dict_qs = dict()
-        self.prospective_seeds = Queue() 
+        self.prospective_seeds = Queue(5000) 
         self.eggs_q = deque()
         ############################ MAYBE I SHOULD MOVE LOCKS ANYWAY!!!
         self.dict_con_var = threading.Condition()
     
     def get(self, base_hash, wait_time):
-        if self.dict_con_var.acquire(False):        
-            q = self.dict_qs.pop(base_hash, None)
-            self.dict_con_var.notify_all()
-            self.dict_con_var.release()
-        else:
-            return None
+        #if self.dict_con_var.acquire(False):        
+        q = self.dict_qs.get(base_hash, None)
+        #    self.dict_con_var.notify_all()
+        #    self.dict_con_var.release()
+        #else:
+        #    return None
         if q == None:
             return None
         try: # check if it is empty or times out 
@@ -44,16 +44,24 @@ class SCSmartQueue(object):
     def put(self, ext_url):
         parshed_u = urlparse(ext_url)
         hash = hashlib.md5()
-        hash.update(parshed_u.scheme + "://" + parshed_u.netloc)  
+        base_url = parshed_u.scheme + "://" + parshed_u.netloc
+        hash.update(base_url)  
         ext_baseurl_hash = hash.hexdigest()
-        self.dict_con_var.acquire() 
+        #self.dict_con_var.acquire() 
         if self.dict_qs.has_key(ext_baseurl_hash):
+            #print(" FOUND FOUND FOUND FOUND FOUND FOUND FOUND FOUND FOUND  FOUND FOUND FOUND FOUND FOUND FOUND FOUND FOUND ")
             #self.dict_qs[ext_baseurl_hash] = Queue()
-            self.dict_qs[ext_baseurl_hash].put(ext_url)
+            try:
+                self.dict_qs[ext_baseurl_hash].put_nowait(ext_url)
+            except:
+                pass
         else:
-            self.prospective_seeds.put(ext_url)
-        self.dict_con_var.notify_all()
-        self.dict_con_var.release()
+            try:
+                self.prospective_seeds.put_nowait(ext_url)
+            except:
+                pass
+        #self.dict_con_var.notify_all()
+        #self.dict_con_var.release()
     
     def getpseed(self):
         try:
@@ -62,23 +70,44 @@ class SCSmartQueue(object):
             return None
     
     def putegg(self, url_seed):
-        parshed_u = urlparse(url_seed)
-        hash = hashlib.md5()
-        hash.update(parshed_u.scheme + "://" + parshed_u.netloc)  
-        new_hashkey = hash.hexdigest() 
-        #Create a new Queue to the Queues Dictionary for the forthcoming Spider
-        self.dict_con_var.acquire()
-        self.dict_qs[new_hashkey] = Queue()
-        self.dict_con_var.notify_all()
-        self.dict_con_var.release()
         #Update the eggs Queue for a new spider to emerge
         self.eggs_q.appendleft(url_seed)
         
-    def popegg(self):
+    def popegg(self, kill_eggs=False):
         try:
-            return self.eggs_q.pop()
+            if not kill_eggs:
+                egg = self.eggs_q.pop()
+                if egg:
+                    parshed_u = urlparse(egg)
+                    hash = hashlib.md5()
+                    hash.update(parshed_u.scheme + "://" + parshed_u.netloc)  
+                    new_hashkey = hash.hexdigest() 
+                    #Create a new Queue to the Queues Dictionary for the forthcoming Spider
+                    #self.dict_con_var.acquire()
+                    self.dict_qs[new_hashkey] = Queue(5)
+                    #self.dict_con_var.notify_all()
+                    #self.dict_con_var.release()
+                    return egg
+                else:
+                    return None 
+            else:
+                None
         except IndexError:
             return None
+        
+    def full(self, base_hash):
+        #if self.dict_con_var.acquire(False):        
+        q = self.dict_qs.get(base_hash, None)
+        #    self.dict_con_var.notify_all()
+        #    self.dict_con_var.release()
+        #else:
+        #    return None
+        if q == None:
+            return None
+        #try: # check if it is empty or times out 
+        return q.full()
+        #except:
+        #    return None
             
 
 class SCSpidermom(Process):
@@ -102,15 +131,25 @@ class SCSpidermom(Process):
                 SCSpidermom.Num -= 1
                 return
             #If the prespective_seed is big enough that SCSpidermom happens to find it non-Empty then a new egg_fertilizer will start
-            if len(self.egg_fertillise_ps) < 400:
+            if len(self.egg_fertillise_ps) < 200:
                 prospective_seed = self.smart_q.getpseed()
             else:
                 prospective_seed = None
             if prospective_seed:
-                print('PROSP_SEED: %s' % prospective_seed)
+                #print('PROSP_SEED: %s' % prospective_seed)
+                up = urlparse(prospective_seed)
+                bup = up.scheme + "://" + up.netloc
+                if bup == "http://www.insomnia.gr":
+                    print("FOUND FOUND FOUND FOUND FOUND FOUND FOUND FOUND FOUND FOUND FOUND FOUND FOUND FOUND FOUND FOUND FOUND FOUND FOUND FOUND FOUND FOUND FOUND FOUND")  
                 self.egg_fertillise_ps.append( Process(target=self.due, args=(prospective_seed,)) )
                 ef_i = len(self.egg_fertillise_ps) - 1
                 self.egg_fertillise_ps[ef_i].start()
+            #Check if the "egg fertillisers" are still alive if not just Join() (terminate) them for good
+            for egg_frtlz_p in self.egg_fertillise_ps:
+                if not egg_frtlz_p.is_alive():
+                    #print("FERTILIZER IS DEAD - JOIN\n")
+                    egg_frtlz_p.join()
+                    self.egg_fertillise_ps.remove(egg_frtlz_p)
         #In case this process is terminated then all the SubProcesses should terminate too
         for egg_frtlz_p in self.egg_fertillise_ps:
             egg_frtlz_p.join()
@@ -120,10 +159,10 @@ class SCSpidermom(Process):
         while prospective_seed:
             parshed_url = urlparse(prospective_seed)
             base_url = parshed_url.scheme + "://" + parshed_url.netloc
-            self.seedtree.acquire()
+            #self.seedtree.acquire()
             seen = self.seedtree.ust(base_url)
-            self.seedtree.notify_all()
-            self.seedtree.release()
+            #self.seedtree.notify_all()
+            #self.seedtree.release()
             if not seen:
                 self.smart_q.putegg(prospective_seed)
             #Get next prospective seed to fertillise a SCSpider egg

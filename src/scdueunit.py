@@ -81,9 +81,9 @@ class DUEUnit(object):
             try:
                 if file_headers:
                     header = "BASE URL: " + str( self.base_url['hashkey'] ) + " => " + str( self.base_url['url'] ) + "/\n"
-                    print header
+                    #print header
                     f.write(header.encode())
-                    print header
+                    #print header
                 lines = [ str(hash) + " => " + str(url) + "\n" for hash, url in self.seen.items()] 
                 for line in lines:
                     f.write(line.encode()) # Write a string to a file
