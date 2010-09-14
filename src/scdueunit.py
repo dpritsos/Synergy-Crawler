@@ -95,6 +95,7 @@ class DUEUnit(object):
         self.filelist.append([f,filename])
         #Clears the seen dictionary
         self.seen.clear()
+        return True
                
     def setBase(self, url):
         """This is required for Manager() object in multiprocessing in case is need to be used... I think!"""
@@ -120,7 +121,7 @@ class DUEUnit(object):
         if not self.filelist:
             #print("OUT FILE UST: NO FILES")
             return False
-        gpool = eventlet.GreenPool(10000)
+        gpool = eventlet.GreenPool(2) ########### Check This because it is too small for but works for scstrategy_1
         #Make url_hash key to an iteratable [ url_hash, url_hash, url_hash,...]
         iter_url_hash = map( lambda x: url_hash, range(len(self.filelist)) )
         for seen in gpool.imap(self.__ustf, iter_url_hash, self.filelist):
@@ -132,10 +133,15 @@ class DUEUnit(object):
         #print("URL_HASH: %s" % url_hash)
         if file[0].closed: 
             try:
-                f = open( self.filespath + file[1], "r" )
-            except IOError:
-                print("OUT FILE UST: ERROR")
-                return None #Return None to indicate a problem 
+                f = open( self.filespath + str(file[1]), "r" )
+            except IOError, e:
+                while e:
+                    try:
+                        f = open( self.filespath + str(file[1]), "r" )
+                    except IOError, e:
+                        pass
+                #print("OUT FILE UST: ERROR - file: %s" % file[1])
+                #return None #Return None to indicate a problem 
         #The following for loop is an alternative approach to reading lines instead of using f.readline() or f.readlines()
         for fileline in f:
             line = fileline.split(" => ") #BE CAREFULL with SPACES

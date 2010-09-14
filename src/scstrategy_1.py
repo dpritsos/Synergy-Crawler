@@ -29,7 +29,7 @@ def monitor_all():
         #print("genreIdentQ len:" + str( self.genreidentQ.qsize() ) )
         #print("pGenreIdentL Count:" + str( self.pGcount.value ) )
         #print("pfetchersL Count:" + str( self.pFcount.value ) ) #len(self.pfetchersL) )
-        #print("pscannersL Count:" + str( self.pScount.value ) ) #len(self.pscannersL) )
+        #print("pscannersL Countc:" + str( self.pScount.value ) ) #len(self.pscannersL) )
         #print("pkeepersL Count:" + str( self.pKcount.value ) )
         #print("\n\n\n" )
         time.sleep(10)       
@@ -108,21 +108,21 @@ if __name__ == '__main__':
                 #line = "SPIDER %d : IS_ALIVE\n" % (scspider_ps.index(scspider) + 1)
                 #print(line)
             if not scspider.is_alive():
-                scspider.join(5)
-                scspider_ps.remove(scspider)
+                scspider.join()
                 line = "SPIDER %d : DEAD - JOIN\n" % (scspider_ps.index(scspider) + 1)
-                print(line)
-            if not scspider.is_alive():
-                scspider.terminate()
                 scspider_ps.remove(scspider)
-                line = "SPIDER %d : DEAD - TERMINATE\n" % (scspider_ps.index(scspider) + 1)
                 print(line)
-        if len(scspider_ps) > 200:
+            #if not scspider.is_alive():
+            #    scspider.terminate()
+            #    scspider_ps.remove(scspider)
+            #    line = "SPIDER %d : DEAD - TERMINATE\n" % (scspider_ps.index(scspider) + 1)
+            #    print(line)
+        if len(scspider_ps) > 200 or killall_evt.is_set():
             #Just Kill Some Eggs - SORRY ABOUT THAT
-            for i in xrange(10000):
+            for i in xrange(1000):
                 scsmart_q.popegg(kill_eggs=True)
             continue
-        if new_seed:
+        if new_seed and not killall_evt.is_set():
             print("NEW SPIDER %d with BASE_URL: %s" % ((len(scspider_ps) + 1), new_seed))
             scspider_ps.append( SCSpider(seed=new_seed, kill_evt=killall_evt, ext_due_q=scsmart_q, spider_spoof_id=user_agent) )
             scsp_i = len(scspider_ps) - 1
@@ -132,11 +132,11 @@ if __name__ == '__main__':
     #Try to end properly this Process and its SubProcesses   
     for scspider in scspider_ps:
         scspider.join()
-    scspidermom_p.join(10)
+    scspidermom_p.join(5)
     #m.join(10)
-    scst_h.join(10)
-    scsq_m.join(10)
-    scst_m.join(10)
+    scst_h.join(5)
+    scsq_m.join(5)
+    scst_m.join(5)
     #In case some Process is still alive Just Kill them all 
     for scspider in scspider_ps:
         if scspider.is_alive():

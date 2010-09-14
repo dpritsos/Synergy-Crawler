@@ -68,7 +68,7 @@ class SCSpider(Process):
         self.due.setBase(url.scheme + "://" +url.netloc) 
         #Define 10000 Green Threads for fetching and lets see how it goes
         #fetchers_p = Pool(10) #eventlet.GreenPool(10000)
-        fetchers_p = eventlet.GreenPool(100000)
+        fetchers_p = eventlet.GreenPool(500)
         #A thread is constantly checking the DUE seen dictionary is big enough to be saved on disk
         disk_keeper_thrd = Thread(target=self.savedue)
         disk_keeper_thrd.start()
@@ -125,7 +125,7 @@ class SCSpider(Process):
                                 if self.ext_url_q != None:
                                     #print("Sendto EXTERNAL LINKS: %s" % link[2])
                                     #if self.ext_url_q.full(self.due.base_url['hashkey']) == True:
-                                    #    pass #print("FFFFFFFFFFFFFFFFFFFFUUUUUUUUUUUUUUUUUUCCCCCCCCCCCCCCCCCKKKKKKKKKKKKKKK Queue Botle neck\n")
+                                        #print("FFFFFFFFFFFFFFFFFFFFUUUUUUUUUUUUUUUUUUCCCCCCCCCCCCCCCCCKKKKKKKKKKKKKKK Queue Botle neck\n")
                                     #elif self.ext_url_q.full(self.due.base_url['hashkey']) == None:
                                     #    pass #print("NNNNNNNNNNNNNNNNNNNNNNNNNNNNOOOOOOOOOONNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN\n")
                                         
@@ -150,7 +150,7 @@ class SCSpider(Process):
             #Now give the new URLs List back to the Fetcher GreenThreads 
             self.urls_l = tmp_urls_l
         #If this Process has to be terminated wait for the Disk_keeper Thread to finish its job and join
-        disk_keeper_thrd.join(10)
+        disk_keeper_thrd.join(2)
         
     def fetch(self, url):
         #print("IN FETCH: " + str(self.headers))
@@ -239,7 +239,10 @@ class SCSpider(Process):
             self.due.acquire()
             while self.due.seen_len() < 5:
                 self.due.wait()
-            self.due.savetofile()
+            if not self.due.savetofile():
+                print("FILE NOT SAVED - HALT")
+                self.kill_evt.set()
+                return
             #self.due.notify_all()
             self.due.release()
             

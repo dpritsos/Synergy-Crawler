@@ -22,7 +22,7 @@ class SCSmartQueue(object):
     
     def __init__(self):
         self.dict_qs = dict()
-        self.prospective_seeds = Queue(5000) 
+        self.prospective_seeds = Queue(1000) 
         self.eggs_q = deque()
         ############################ MAYBE I SHOULD MOVE LOCKS ANYWAY!!!
         self.dict_con_var = threading.Condition()
@@ -64,6 +64,7 @@ class SCSmartQueue(object):
         #self.dict_con_var.release()
     
     def getpseed(self):
+        #print("PROSP: %s" % self.prospective_seeds.qsize())
         try:
             return self.prospective_seeds.get_nowait()
         except:
@@ -74,24 +75,23 @@ class SCSmartQueue(object):
         self.eggs_q.appendleft(url_seed)
         
     def popegg(self, kill_eggs=False):
+        #print("#Eggs %s" % (len(self.eggs_q)))
         try:
+            #print("QUEUES: %s" % len(self.dict_qs))
+            egg = self.eggs_q.pop()
             if not kill_eggs:
-                egg = self.eggs_q.pop()
-                if egg:
-                    parshed_u = urlparse(egg)
-                    hash = hashlib.md5()
-                    hash.update(parshed_u.scheme + "://" + parshed_u.netloc)  
-                    new_hashkey = hash.hexdigest() 
-                    #Create a new Queue to the Queues Dictionary for the forthcoming Spider
-                    #self.dict_con_var.acquire()
-                    self.dict_qs[new_hashkey] = Queue(5)
-                    #self.dict_con_var.notify_all()
-                    #self.dict_con_var.release()
-                    return egg
-                else:
-                    return None 
+                parshed_u = urlparse(egg)
+                hash = hashlib.md5()
+                hash.update(parshed_u.scheme + "://" + parshed_u.netloc)  
+                new_hashkey = hash.hexdigest() 
+                #Create a new Queue to the Queues Dictionary for the forthcoming Spider
+                #self.dict_con_var.acquire()
+                self.dict_qs[new_hashkey] = Queue(5)
+                #self.dict_con_var.notify_all()
+                #self.dict_con_var.release()
+                return egg
             else:
-                None
+                return None 
         except IndexError:
             return None
         
@@ -153,6 +153,7 @@ class SCSpidermom(Process):
         #In case this process is terminated then all the SubProcesses should terminate too
         for egg_frtlz_p in self.egg_fertillise_ps:
             egg_frtlz_p.join()
+            self.egg_fertillise_ps.remove(egg_frtlz_p)
            
     def due(self, prospective_seed):
         """due: Duplicate URL Elimination"""
@@ -160,7 +161,12 @@ class SCSpidermom(Process):
             parshed_url = urlparse(prospective_seed)
             base_url = parshed_url.scheme + "://" + parshed_url.netloc
             #self.seedtree.acquire()
+            #try:
             seen = self.seedtree.ust(base_url)
+            #except EOFError, e:
+            #    print("%s - CONNECTION & EOF ERROR: %s" % (base_url, e))
+            #    self.kill_evt.set()
+            #    return
             #self.seedtree.notify_all()
             #self.seedtree.release()
             if not seen:
