@@ -44,18 +44,17 @@ class SCSeedTreeHandler(Process):
             #has more than 500 elements save them to the local drive 
             #otherwise suspend (thanx to Conditional Variable defined in the DUEUnit Class object
             #self.seedtree.acquire()
-            while self.seedtree.seen_len() < 200:
-                pass
+            while self.seedtree.seen_len() < 400:
+                pass #self.seedtree.wait() #pass
             else:
                 print("SEED TREE SEEN LIST_LEN %s" % self.seedtree.seen_len())
-            #    self.seedtree.wait()
+                
             filenum += 1
             file_name = "Visited_WebSite_List." + str(filenum)
             if not self.seedtree.savetofile( file_name , file_headers=False):
                 print("SEEDtREE: FILE NOT SAVED - HALT")
                 self.kill_evt.set()
                 return
-            #self.seedtree.savetofile("Visited_WebSite_List" )
             #self.seedtree.notify_all()
             #self.seedtree.release()
 

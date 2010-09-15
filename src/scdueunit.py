@@ -77,22 +77,26 @@ class DUEUnit(object):
         if not filename:
             filename =  str( urlparse(self.base_url['url'] ).netloc ) + "." + str( len(self.filelist) ) + ".seenurls"
         try:
-            f = open( self.filespath + filename, "w" ) 
-            try:
-                if file_headers:
-                    header = "BASE URL: " + str( self.base_url['hashkey'] ) + " => " + str( self.base_url['url'] ) + "/\n"
-                    #print header
-                    f.write(header.encode())
-                    #print header
-                lines = [ str(hash) + " => " + str(url) + "\n" for hash, url in self.seen.items()] 
-                for line in lines:
-                    f.write(line.encode()) # Write a string to a file
-            finally:
-                f.close()
+            f = open( self.filespath + filename, "w" )
         except IOError:
-            return None
+            return None 
+        try:
+            if file_headers:
+                header = "BASE URL: " + str( self.base_url['hashkey'] ) + " => " + str( self.base_url['url'] ) + "/\n"
+                #print header
+                f.write(header.encode())
+                #print header
+            lines = [ str(hash) + " => " + str(url) + "\n" for hash, url in self.seen.items()] 
+            for line in lines:
+                f.write(line.encode()) # Write a string to a file
+        except:
+            print("ERROR WRITTING FILE: %s" % filename)
+            f.close()
+        #Maybe A finally statement could be used as in previous version but leave it like this to be sure
+        f.close()
         #Adding the new file name in the file list
-        self.filelist.append([f,filename])
+        #self.filelist.append([f,filename]) #Should I keep f too or it is too big?
+        self.filelist.append(str(filename))
         #Clears the seen dictionary
         self.seen.clear()
         return True
@@ -131,15 +135,15 @@ class DUEUnit(object):
     
     def __ustf(self, url_hash, file=None):
         #print("URL_HASH: %s" % url_hash)
-        if file[0].closed: 
-            try:
-                f = open( self.filespath + str(file[1]), "r" )
-            except IOError, e:
-                while e:
-                    try:
-                        f = open( self.filespath + str(file[1]), "r" )
-                    except IOError, e:
-                        pass
+        #if file[0].closed: 
+        try:
+            f = open( self.filespath + str(file), "r" )
+        except IOError, e:
+            while e:
+                try:
+                    f = open( self.filespath + str(file), "r" )
+                except IOError, e:
+                    pass
                 #print("OUT FILE UST: ERROR - file: %s" % file[1])
                 #return None #Return None to indicate a problem 
         #The following for loop is an alternative approach to reading lines instead of using f.readline() or f.readlines()

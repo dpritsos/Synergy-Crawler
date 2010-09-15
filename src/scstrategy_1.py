@@ -112,14 +112,9 @@ if __name__ == '__main__':
                 line = "SPIDER %d : DEAD - JOIN\n" % (scspider_ps.index(scspider) + 1)
                 scspider_ps.remove(scspider)
                 print(line)
-            #if not scspider.is_alive():
-            #    scspider.terminate()
-            #    scspider_ps.remove(scspider)
-            #    line = "SPIDER %d : DEAD - TERMINATE\n" % (scspider_ps.index(scspider) + 1)
-            #    print(line)
         if len(scspider_ps) > 200 or killall_evt.is_set():
             #Just Kill Some Eggs - SORRY ABOUT THAT
-            for i in xrange(1000):
+            for i in xrange(5000):
                 scsmart_q.popegg(kill_eggs=True)
             continue
         if new_seed and not killall_evt.is_set():

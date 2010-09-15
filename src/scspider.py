@@ -68,7 +68,7 @@ class SCSpider(Process):
         self.due.setBase(url.scheme + "://" +url.netloc) 
         #Define 10000 Green Threads for fetching and lets see how it goes
         #fetchers_p = Pool(10) #eventlet.GreenPool(10000)
-        fetchers_p = eventlet.GreenPool(500)
+        fetchers_p = eventlet.GreenPool(100)
         #A thread is constantly checking the DUE seen dictionary is big enough to be saved on disk
         disk_keeper_thrd = Thread(target=self.savedue)
         disk_keeper_thrd.start()
@@ -134,6 +134,7 @@ class SCSpider(Process):
                                     seen = self.ust(link[2])
                                     if seen:
                                         tmp_urls_l.append(link[2])
+                del xhtml #for Preventing Memory Leakage remove it if has no effect but delay of the inevetable
                     #else:
                         #print("SPIDER %d of %d BASE %s" % (self.pnum, SCSpider.Num, self.due.base_url['url']))
                         #print("No Proper href found: %s" % link[2])      
@@ -147,7 +148,8 @@ class SCSpider(Process):
                 #for sc_q in self.scqs:
                 #    sc_q.put({'xtree' : xhtml_t,
                 #              'parsing_errors' : parsing_errors})
-            #Now give the new URLs List back to the Fetcher GreenThreads 
+            #Now give the new URLs List back to the Fetcher GreenThreads
+            del self.urls_l #for Preventing Memory Leakage remove it if has no effect but delay of the inevetable  
             self.urls_l = tmp_urls_l
         #If this Process has to be terminated wait for the Disk_keeper Thread to finish its job and join
         disk_keeper_thrd.join(2)
@@ -213,6 +215,7 @@ class SCSpider(Process):
             except:
                 #print("SPIDER %d of %d BASE %s" % (self.pnum, SCSpider.Num, self.due.base_url['url']))
                 #print("FAULTY URL (encoding) : %s" % url)
+                del xhtml_s #for Preventing Memory Leakage remove it if has no effect but delay of the inevetable
                 return (None, url)
         else:
             try:
@@ -220,6 +223,7 @@ class SCSpider(Process):
             except:
                 #print("SPIDER %d of %d BASE %s" % (self.pnum, SCSpider.Num, self.due.base_url['url']))
                 #print("FAULTY URL : %s" % url)
+                del xhtml_s #for Preventing Memory Leakage remove it if has no effect but delay of the inevetable
                 return (None, url)
                 #try:
                 #    xhtml_t = soup.fromstring(page_soc[0])
@@ -230,14 +234,14 @@ class SCSpider(Process):
                 #    return
                 
         xhtml_t.make_links_absolute(self.due.base_url['url'], resolve_base_href=True)    
-                
+        del xhtml_s #for Preventing Memory Leakage remove it if has no effect but delay of the inevetable
         #Return the xhtml_t
         return (xhtml_t, url)
     
     def savedue(self):
-        while True:
+        while not self.kill_evt.is_set():
             self.due.acquire()
-            while self.due.seen_len() < 5:
+            while self.due.seen_len() < 100:
                 self.due.wait()
             if not self.due.savetofile():
                 print("FILE NOT SAVED - HALT")

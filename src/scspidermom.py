@@ -131,7 +131,7 @@ class SCSpidermom(Process):
                 SCSpidermom.Num -= 1
                 return
             #If the prespective_seed is big enough that SCSpidermom happens to find it non-Empty then a new egg_fertilizer will start
-            if len(self.egg_fertillise_ps) < 200:
+            if len(self.egg_fertillise_ps) < 4:
                 prospective_seed = self.smart_q.getpseed()
             else:
                 prospective_seed = None
@@ -161,12 +161,12 @@ class SCSpidermom(Process):
             parshed_url = urlparse(prospective_seed)
             base_url = parshed_url.scheme + "://" + parshed_url.netloc
             #self.seedtree.acquire()
-            #try:
-            seen = self.seedtree.ust(base_url)
-            #except EOFError, e:
-            #    print("%s - CONNECTION & EOF ERROR: %s" % (base_url, e))
-            #    self.kill_evt.set()
-            #    return
+            try:
+                seen = self.seedtree.ust(base_url)
+            except EOFError, e:
+                print("%s - CONNECTION & EOF ERROR: %s" % (base_url, e))
+                self.kill_evt.set()
+                return #seen = None
             #self.seedtree.notify_all()
             #self.seedtree.release()
             if not seen:
