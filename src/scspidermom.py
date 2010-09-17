@@ -11,11 +11,6 @@ from collections import deque
 from Queue import Queue
 import hashlib
 from urlparse import urlparse
-import time
-
-#Import Web Crawlers element modules
-from genreidentifier import GenreIdentifier
-from scspider import SCSpider
 
                                    
 class SCSmartQueue(object):

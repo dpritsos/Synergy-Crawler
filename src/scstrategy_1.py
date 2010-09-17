@@ -10,6 +10,7 @@ from multiprocessing.managers import BaseManager
 from scspider import SCSpider
 from scspidermom import SCSpidermom, SCSmartQueue
 from scseedtree import SCSeedTree, SCSeedTreeHandler
+from scvectgen import SCVectGen
 
 import time #Maybe for later
 
@@ -65,9 +66,9 @@ if __name__ == '__main__':
     #Define the User-Agent HTTP header for bypassing Search Engines or other Sites prohibition
     user_agent = 'Mozilla/5.0 (X11; U; Linux 2.6.34.1-SquidSheep; en-US; rv:1.9.2.3) Gecko/20100402 Iceweasel/3.6.3 (like Firefox/3.6.3)'
     #Gseed = "http://www.alpamayopro.gr"
-    Gseed = "http://www.insomnia.gr"
+    #Gseed = "http://www.insomnia.gr"
     #Gseed = "http://www.blogy.com"
-    #Gseed = "http://www.yahoo.com" 
+    Gseed = "http://www.yahoo.com" 
     #Gseed ="http://www.google.gr/search?q=google&hl=el&client=firefox-a&hs=ksj&rls=com.ubuntu:en-GB:official&prmd=n&source=lnms&tbs=nws:1&ei=hhUuTPeRJML58Aa-_-C7Aw&sa=X&oi=mode_link&ct=mode&ved=0CBIQ_AU"
     
     #Manger process for InterProcess Event() and Simple Queue()
@@ -86,6 +87,10 @@ if __name__ == '__main__':
     #Start SCSpidermom Process
     scspidermom_p = SCSpidermom(scsmart_q, scseed_t, kill_evt=killall_evt)
     scspidermom_p.start()
+    
+    #Start the SCVectGen Web Page Vector Generator 
+    scvectgen_p = SCVectGen(xhtmltree_q, kill_evt=killall_evt)
+    scvectgen_p.start()
     
     #Create the first Queue for the very first SCSpider Process
     scsmart_q.put(Gseed)
@@ -119,19 +124,27 @@ if __name__ == '__main__':
             continue
         if new_seed and not killall_evt.is_set():
             print("NEW SPIDER %d with BASE_URL: %s" % ((len(scspider_ps) + 1), new_seed))
-            scspider_ps.append( SCSpider(seed=new_seed, kill_evt=killall_evt, ext_due_q=scsmart_q, spider_spoof_id=user_agent) )
+            scspider_ps.append( SCSpider(seed=new_seed, xtrees_q=xhtmltree_q, kill_evt=killall_evt, ext_due_q=scsmart_q, spider_spoof_id=user_agent) )
             scsp_i = len(scspider_ps) - 1
             scspider_ps[scsp_i].start()
         new_seed = scsmart_q.popegg()
     
-    #Try to end properly this Process and its SubProcesses   
-    for scspider in scspider_ps:
-        scspider.join()
-    scspidermom_p.join(5)
+    #Try to end properly this Process and its SubProcesses
+    if scspider_ps:   
+        for scspider in scspider_ps:
+            if scspider.is_alive():
+                scspider.join(5)
+    if scspidermom_p.is_alive():
+        scspidermom_p.join(5)
     #m.join(10)
-    scst_h.join(5)
-    scsq_m.join(5)
-    scst_m.join(5)
+    if scst_h.is_alive():
+        scst_h.join(1)
+    if scvectgen_p.is_alive():
+        scvectgen_p.join(1)
+    if scsq_m.is_alive():
+        scsq_m.join(1)
+    if scst_m.is_alive():
+        scst_m.join(1)
     #In case some Process is still alive Just Kill them all 
     for scspider in scspider_ps:
         if scspider.is_alive():
@@ -142,6 +155,8 @@ if __name__ == '__main__':
     #    m.terminate()
     if scst_h.is_alive():
         scst_h.terminate()
+    if scvectgen_p.is_alive():
+        scvectgen_p.terminate()
     if scsq_m.is_alive():
         scsq_m.terminate()
     if scst_m.is_alive():

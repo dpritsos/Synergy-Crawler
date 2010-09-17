@@ -7,6 +7,7 @@ from threading import Thread
 import eventlet 
 import lxml.etree 
 import lxml.html
+from lxml.html.clean import Cleaner
 import lxml.html.soupparser as soup
 from StringIO import StringIO
 from collections import deque
@@ -72,11 +73,6 @@ class SCSpider(Process):
         #A thread is constantly checking the DUE seen dictionary is big enough to be saved on disk
         disk_keeper_thrd = Thread(target=self.savedue)
         disk_keeper_thrd.start()
-        #The HTML Parsers with and without recover mode but the capability to download the Proper DTD always ON
-        #In case the lxml.html.parser will dispatched to sub-processes or threads then 
-        #the HTMLParser(s) should be defined within these sub-processes or threads
-        htmlparser = lxml.etree.HTMLParser(recover=False, no_network=False) 
-        htmlparser_r = lxml.etree.HTMLParser(recover=True, no_network=False)
         #From this line and below the loop this Process is starting 
         while True:
             if self.kill_evt.is_set():
@@ -134,7 +130,7 @@ class SCSpider(Process):
                                     seen = self.ust(link[2])
                                     if seen:
                                         tmp_urls_l.append(link[2])
-                del xhtml #for Preventing Memory Leakage remove it if has no effect but delay of the inevetable
+                #del xhtml #for Preventing Memory Leakage remove it if has no effect but delay of the inevetable
                     #else:
                         #print("SPIDER %d of %d BASE %s" % (self.pnum, SCSpider.Num, self.due.base_url['url']))
                         #print("No Proper href found: %s" % link[2])      
@@ -142,9 +138,10 @@ class SCSpider(Process):
                 #No need to send the urls found above, because in case this will be needed  
                 #lxml (i.e. libxml2 written in C/C++ ) will do the job quite fast. So, at least we same some memory
                 #However we sent the Errors have occurred during parsing 
-                #if self.xtrees_q != None:
-                #    self.xtrees_q.put({'xtree' : xhtml_t,
-                #                       'parsing_errors' : parsing_errors})
+                if self.xtrees_q:
+                    #print("#################### %s" % xhtml_t.xpath("//text()")) #xhtml_t.text_content())
+                    self.xtrees_q.put({'xtree' : lxml.etree.tostring(xhtml_t),
+                                       'parsing_errors' : None})
                 #for sc_q in self.scqs:
                 #    sc_q.put({'xtree' : xhtml_t,
                 #              'parsing_errors' : parsing_errors})
@@ -152,7 +149,7 @@ class SCSpider(Process):
             del self.urls_l #for Preventing Memory Leakage remove it if has no effect but delay of the inevetable  
             self.urls_l = tmp_urls_l
         #If this Process has to be terminated wait for the Disk_keeper Thread to finish its job and join
-        disk_keeper_thrd.join(2)
+        disk_keeper_thrd.join(1)
         
     def fetch(self, url):
         #print("IN FETCH: " + str(self.headers))
@@ -189,6 +186,11 @@ class SCSpider(Process):
         except:
             pass
         parsing_errors = list()
+        #The HTML Parsers with and without recover mode but the capability to download the Proper DTD always ON
+        #In case the lxml.html.parser will dispatched to sub-processes or threads then 
+        #the HTMLParser(s) should be defined within these sub-processes or threads
+        #htmlparser = lxml.etree.HTMLParser(recover=False, no_network=False) 
+        #htmlparser_r = lxml.etree.HTMLParser(recover=True, no_network=False)
         #try:           
         #xhtml_t = 1 #lxml.html.parse(page_soc, parser=htmlparser, base_url=self.due.base_url['url'])
         #except lxml.etree.XMLSyntaxError, error:
@@ -209,6 +211,12 @@ class SCSpider(Process):
 
         if not xhtml_s:
             return (None, url)
+        else:
+            #This a very important part of the Crawler because it is cleaning the XHTML from unwanted tags - STILL NEEDs TO BE CAREFULL WITH WHAT I CLEAN
+            cleaner = Cleaner( scripts=True, javascript=True, comments=True, style=True,\
+                           links=True, meta=False, page_structure=False, processing_instructions=True,\
+                           embedded=True, annoying_tags=True, remove_unknown_tags=True )#meta=False becasue we need MetaInfo
+            xhtml_s = cleaner.clean_html(xhtml_s)
         if charset:
             try:
                 xhtml_t = lxml.html.document_fromstring( str(xhtml_s.decode(charset)), base_url=self.due.base_url['url'] )
@@ -232,9 +240,8 @@ class SCSpider(Process):
                 #    print("FAULTY URL :")
                 #    #print("FAULTY URL : %s" % page_soc[2])
                 #    return
-                
         xhtml_t.make_links_absolute(self.due.base_url['url'], resolve_base_href=True)    
-        del xhtml_s #for Preventing Memory Leakage remove it if has no effect but delay of the inevetable
+        xhtml_s #for Preventing Memory Leakage remove it if has no effect but delay of the inevetable
         #Return the xhtml_t
         return (xhtml_t, url)
     

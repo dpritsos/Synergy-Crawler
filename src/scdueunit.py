@@ -130,7 +130,9 @@ class DUEUnit(object):
         iter_url_hash = map( lambda x: url_hash, range(len(self.filelist)) )
         for seen in gpool.imap(self.__ustf, iter_url_hash, self.filelist):
             if seen:
+                #del gpool #it seems not needing it
                 return seen
+        #del gpool #it seems not needing it
         return False
     
     def __ustf(self, url_hash, file=None):
