@@ -66,9 +66,9 @@ if __name__ == '__main__':
     #Define the User-Agent HTTP header for bypassing Search Engines or other Sites prohibition
     user_agent = 'Mozilla/5.0 (X11; U; Linux 2.6.34.1-SquidSheep; en-US; rv:1.9.2.3) Gecko/20100402 Iceweasel/3.6.3 (like Firefox/3.6.3)'
     #Gseed = "http://www.alpamayopro.gr"
-    #Gseed = "http://www.insomnia.gr"
+    Gseed = "http://www.insomnia.gr"
     #Gseed = "http://www.blogy.com"
-    Gseed = "http://www.yahoo.com" 
+    #Gseed = "http://www.yahoo.com" 
     #Gseed ="http://www.google.gr/search?q=google&hl=el&client=firefox-a&hs=ksj&rls=com.ubuntu:en-GB:official&prmd=n&source=lnms&tbs=nws:1&ei=hhUuTPeRJML58Aa-_-C7Aw&sa=X&oi=mode_link&ct=mode&ved=0CBIQ_AU"
     
     #Manger process for InterProcess Event() and Simple Queue()

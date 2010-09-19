@@ -2,9 +2,10 @@
 import multiprocessing
 from multiprocessing import Pool, Process, Value
 #from eventlet.green import urllib2
-import urllib2
+#import urllib2 #use it only in MultiProcessing/Threading not in GreenThreading
 from threading import Thread
 import eventlet 
+from eventlet.green import urllib2 #For GreenThreading not I don't know how it is behaving with MultiProcessing/Threading
 import lxml.etree 
 import lxml.html
 from lxml.html.clean import Cleaner
@@ -14,12 +15,15 @@ from collections import deque
 from urlparse import urlparse 
 import hashlib
 
+import copy
+
 from scdueunit import DUEUnit
 
 import time
 
 #Use this function only in case you want to have a Process.Pool() instead of Green.Pool()
 #This is because Process.Pool can not have a class member function as argument 
+#for using the Following fucntion import 
 def ffetchsrc(url):
     htmlsrc = None
     socket = None
@@ -134,14 +138,6 @@ class SCSpider(Process):
                     #else:
                         #print("SPIDER %d of %d BASE %s" % (self.pnum, SCSpider.Num, self.due.base_url['url']))
                         #print("No Proper href found: %s" % link[2])      
-                #Put xhtml tree to other queue for "Intelligent" processing if any
-                #No need to send the urls found above, because in case this will be needed  
-                #lxml (i.e. libxml2 written in C/C++ ) will do the job quite fast. So, at least we same some memory
-                #However we sent the Errors have occurred during parsing 
-                if self.xtrees_q:
-                    #print("#################### %s" % xhtml_t.xpath("//text()")) #xhtml_t.text_content())
-                    self.xtrees_q.put({'xtree' : lxml.etree.tostring(xhtml_t),
-                                       'parsing_errors' : None})
                 #for sc_q in self.scqs:
                 #    sc_q.put({'xtree' : xhtml_t,
                 #              'parsing_errors' : parsing_errors})
@@ -177,73 +173,59 @@ class SCSpider(Process):
         xhtml_s = None
         socket = None
         charset = None
+        real_url = None
         try:
             rq = urllib2.Request(url, headers=self.headers)
             socket = urllib2.urlopen(rq)
             xhtml_s = socket.read()
             charset = socket.info().getparam('charset')
-            socket.close()
+            #VERY IMPORTANT because it returns the URL that date came from, therefore, it can reveal redirections
+            real_url = None #socket.geturl() 
         except:
-            pass
+            return (None, url)
         parsing_errors = list()
         #The HTML Parsers with and without recover mode but the capability to download the Proper DTD always ON
         #In case the lxml.html.parser will dispatched to sub-processes or threads then 
         #the HTMLParser(s) should be defined within these sub-processes or threads
-        #htmlparser = lxml.etree.HTMLParser(recover=False, no_network=False) 
-        #htmlparser_r = lxml.etree.HTMLParser(recover=True, no_network=False)
-        #try:           
-        #xhtml_t = 1 #lxml.html.parse(page_soc, parser=htmlparser, base_url=self.due.base_url['url'])
-        #except lxml.etree.XMLSyntaxError, error:
-        #    print("PARSE ERROR: %s" % error)
-        #    parsing_errors.append(error)
-        #    try:
-        #        xhtml_t = 1 #lxml.html.parse(page_soc, parser=htmlparser_r, base_url=self.due.base_url['url'])
-        #    except:
-        #        print("PARSE ERROR: %s" % error)
-        #        parsing_errors.append(error)
-        #        try:
-        #            print('DA ZOUP')
-        #            xhtml_t = 1 #lxml.html.soupparser.parse(page_soc)
-        #        except:
-        #            print("FUCKED-UP PAGE")
-        #            parsing_errors.append("BeautifullSoup Failed")
-        #            xhtml_t = lxml.etree.ElementTree(element=None)
-
-        if not xhtml_s:
-            return (None, url)
-        else:
-            #This a very important part of the Crawler because it is cleaning the XHTML from unwanted tags - STILL NEEDs TO BE CAREFULL WITH WHAT I CLEAN
-            cleaner = Cleaner( scripts=True, javascript=True, comments=True, style=True,\
-                           links=True, meta=False, page_structure=False, processing_instructions=True,\
-                           embedded=True, annoying_tags=True, remove_unknown_tags=True )#meta=False becasue we need MetaInfo
-            xhtml_s = cleaner.clean_html(xhtml_s)
-        if charset:
+        htmlparser = lxml.etree.HTMLParser(recover=False, no_network=False) 
+        htmlparser_rcv = lxml.etree.HTMLParser(recover=True, no_network=True)
+        try:           
+            xhtml_t = lxml.html.parse(StringIO(xhtml_s), parser=htmlparser, base_url=self.due.base_url['url']) #
+        except lxml.etree.XMLSyntaxError, error:
+            print("PARSE ERROR (no recovery mode): %s" % error)
+            parsing_errors.append(error)
             try:
-                xhtml_t = lxml.html.document_fromstring( str(xhtml_s.decode(charset)), base_url=self.due.base_url['url'] )
+                xhtml_t = lxml.html.parse(StringIO(xhtml_s), base_url=self.due.base_url['url']) #StringIO(xhtml_s)
             except:
-                #print("SPIDER %d of %d BASE %s" % (self.pnum, SCSpider.Num, self.due.base_url['url']))
-                #print("FAULTY URL (encoding) : %s" % url)
-                del xhtml_s #for Preventing Memory Leakage remove it if has no effect but delay of the inevetable
-                return (None, url)
-        else:
-            try:
-                xhtml_t = lxml.html.document_fromstring( str(xhtml_s), base_url=self.due.base_url['url'] )
-            except:
-                #print("SPIDER %d of %d BASE %s" % (self.pnum, SCSpider.Num, self.due.base_url['url']))
-                #print("FAULTY URL : %s" % url)
-                del xhtml_s #for Preventing Memory Leakage remove it if has no effect but delay of the inevetable
-                return (None, url)
-                #try:
-                #    xhtml_t = soup.fromstring(page_soc[0])
-                #except:
-                #    print("SPIDER %d BASE %s" % (self.pnum, self.due.base_url['url']))
-                #    print("FAULTY URL :")
-                #    #print("FAULTY URL : %s" % page_soc[2])
-                #    return
-        xhtml_t.make_links_absolute(self.due.base_url['url'], resolve_base_href=True)    
-        xhtml_s #for Preventing Memory Leakage remove it if has no effect but delay of the inevetable
-        #Return the xhtml_t
-        return (xhtml_t, url)
+                print("PARSE ERROR (recivery mode): %s" % error)
+                parsing_errors.append(error)
+                try:
+                    print('DA ZOUP')
+                    xhtml_t = soup.parse(xhtml_s) #StringIO(xhtml_s)
+                except:
+                    print("FUCKED-UP PAGE")
+                    parsing_errors.append("BeautifullSoup Failed")
+                    socket.close() #this is Temporarlly here
+                    return (None, url)
+        xhtml_troot = xhtml_t.getroot()
+        try:
+            xhtml_troot.make_links_absolute(self.due.base_url['url'], resolve_base_href=True)
+        except:
+            socket.close() #this is Temporarlly here
+            return (None, url)    
+        socket.close() #this is Temporarlly here
+        #xhtml_s #for Preventing Memory Leakage remove it if has no effect but delay of the inevetable
+        #Put xhtml source (or tree) to other queue for "Intelligent" processing if any. No need to send the urls found above, 
+        #because in case this will be needed lxml (i.e. libxml2 written in C/C++ ) will do the job quite fast. So, at least we same some memory
+        #However we sent the Errors have occurred during parsing 
+        if self.xtrees_q:
+            self.xtrees_q.put({'xtree' : str(xhtml_s),\
+                               'parsing_errors' : str(parsing_errors),\
+                               'url_req' : str(url),\
+                               'url_resp' : str(real_url)\
+                               }) #pickle.dumps() don't use this ElementTree not picklable
+        #Return the xhtml_troot
+        return (xhtml_troot, url)
     
     def savedue(self):
         while not self.kill_evt.is_set():

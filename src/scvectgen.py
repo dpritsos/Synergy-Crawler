@@ -49,19 +49,19 @@ class SCVectGen(Process):
                 xhtml_d = self.sc_xtrees[0].get_nowait()
             except:
                 continue
-            continue
             #if the SCVectGen process manages to get an xhtml_d from the Queue then process the xhtml source
             #xhtml_d = sc_xtr.get()
+            #xhtml_t = xhtml_d['xtree']
+            #f = open("/home/dimitrios/Desktop/PhD_papers/genre_archive/00/00/10/10/sc8003.doc.htm", "r")
+            #xhtml_t = lxml.etree.parse(f, parser=htmlparser_r)
             xhtml_s = xhtml_d['xtree']
-            f = open("/home/dimitrios/Desktop/PhD_papers/genre_archive/00/00/10/10/sc8003.doc.htm", "r")
-            xhtml_t = lxml.etree.parse(f, parser=htmlparser_r)
             cleaner = Cleaner( scripts=True, javascript=True, comments=True, style=True,\
                            links=True, meta=True, page_structure=False, processing_instructions=True,\
-                           embedded=True, annoying_tags=True, remove_unknown_tags=True )#meta=False becasue we need MetaInfo
-            xhtml_s = cleaner.clean_html(lxml.etree.tostring(xhtml_t))
+                           embedded=True, annoying_tags=True, remove_unknown_tags=True )#meta=False because we need MetaInfo
+            xhtml_s = cleaner.clean_html(xhtml_s)
             xhtml_t = lxml.etree.fromstring(xhtml_s, parser=htmlparser_r)
             xhtml_text_l = xhtml_t.xpath("//text()") 
-            xhtml_text_l.sort()
+            #xhtml_text_l.sort() #not really necessary 
             xhtml_TF = dict()
             for terms_s in xhtml_text_l:
                 terms_l = terms_s.split(" ")
