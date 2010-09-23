@@ -12,6 +12,9 @@ from scspidermom import SCSpidermom, SCSmartQueue
 from scseedtree import SCSeedTree, SCSeedTreeHandler
 from scvectgen import SCVectGen
 
+from Queue import Queue
+
+
 import time #Maybe for later
 
 
@@ -77,7 +80,7 @@ if __name__ == '__main__':
     #Define a Global Process Termination Event which will start Manager Process and will return a proxy to the Event() 
     killall_evt = m.Event()
     #Define an xhtmltree Queue for farther analysis of the pages from other Processes
-    xhtmltree_q = m.Queue()
+    #xhtmltree_q = Queue() # Only for interprocess communication
     
     #Start the Handler Process that manipulates the Global DUE i.e. the SCSeedTree defined above
     scseed_t = scst_m.SCSeedTree()
@@ -89,8 +92,8 @@ if __name__ == '__main__':
     scspidermom_p.start()
     
     #Start the SCVectGen Web Page Vector Generator 
-    scvectgen_p = SCVectGen(xhtmltree_q, kill_evt=killall_evt)
-    scvectgen_p.start()
+    #scvectgen_p = SCVectGen(xhtmltree_q, kill_evt=killall_evt)
+    #scvectgen_p.start()
     
     #Create the first Queue for the very first SCSpider Process
     scsmart_q.put(Gseed)
@@ -124,7 +127,7 @@ if __name__ == '__main__':
             continue
         if new_seed and not killall_evt.is_set():
             print("NEW SPIDER %d with BASE_URL: %s" % ((len(scspider_ps) + 1), new_seed))
-            scspider_ps.append( SCSpider(seed=new_seed, xtrees_q=xhtmltree_q, kill_evt=killall_evt, ext_due_q=scsmart_q, spider_spoof_id=user_agent) )
+            scspider_ps.append( SCSpider(seed=new_seed, kill_evt=killall_evt, ext_due_q=scsmart_q, spider_spoof_id=user_agent) )
             scsp_i = len(scspider_ps) - 1
             scspider_ps[scsp_i].start()
         new_seed = scsmart_q.popegg()
@@ -139,8 +142,8 @@ if __name__ == '__main__':
     #m.join(10)
     if scst_h.is_alive():
         scst_h.join(1)
-    if scvectgen_p.is_alive():
-        scvectgen_p.join(1)
+    #if scvectgen_p.is_alive():
+    #    scvectgen_p.join(1)
     if scsq_m.is_alive():
         scsq_m.join(1)
     if scst_m.is_alive():
@@ -155,8 +158,8 @@ if __name__ == '__main__':
     #    m.terminate()
     if scst_h.is_alive():
         scst_h.terminate()
-    if scvectgen_p.is_alive():
-        scvectgen_p.terminate()
+    #if scvectgen_p.is_alive():
+    #    scvectgen_p.terminate()
     if scsq_m.is_alive():
         scsq_m.terminate()
     if scst_m.is_alive():
