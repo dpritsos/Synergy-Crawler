@@ -8,7 +8,6 @@ import eventlet
 from eventlet.green import urllib2 #For GreenThreading not I don't know how it is behaving with MultiProcessing/Threading
 import lxml.etree 
 import lxml.html
-from lxml import objectify
 from lxml.html.clean import Cleaner
 import lxml.html.soupparser as soup
 from StringIO import StringIO
@@ -20,7 +19,7 @@ from Queue import Queue
 
 from scvectgen import SCVectGen
 
-import copy
+from BeautifulSoup import UnicodeDammit
 
 from scdueunit import DUEUnit
 
@@ -135,7 +134,14 @@ class SCSpider(Process):
                     continue
                 else:
                     xhtml_s = xhtml[0]
-                #Parse the XHTML Source fetched by from the GreenThreads 
+                #Find the proper Encoding of the byte_string that urlopen has returned and decoded to it before you pass it to the lxml.html parser  
+                if xhtml[1]:
+                    xhtml_s = xhtml_s.decode(xhtml[1])
+                else:
+                    utf_s = UnicodeDammit(xhtml_s, isHTML=True)
+                    if utf_s:
+                        xhtml_s = utf_s
+                #Parse the XHTML Source fetched by from the GreenThreads
                 xhtml_t = self.parsetoXtree(xhtml_s, clean_xhtml=True)    
                 #While this Process will try to extract URLs, give the tree for PARALLEL Processing from the SCVetGen Thread
                 #ELEMENT TREES FROM LXML IT SUPPOSED TO BE THREAD SAFE
