@@ -61,7 +61,7 @@ if __name__ == '__main__':
     
     #Start the SCSpider restricted to scan the pages of one WebSite
     scspider_ps = list()
-    scspider_ps.append( SCSpider(seed=Gseed, base_url_drop_none=False, urls_number_stop=10, webpg_vect_tu=vects_q,kill_evt=killall_evt, spider_spoof_id=user_agent) )
+    scspider_ps.append( SCSpider(seed=Gseed, base_url_drop_none=False, urls_number_stop=2000, webpg_vect_tu=vects_q,kill_evt=killall_evt, spider_spoof_id=user_agent) )
     scspider_ps[0].start()
     
     terminate = False #Temporarily Here !!!
