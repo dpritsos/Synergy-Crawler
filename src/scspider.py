@@ -137,14 +137,15 @@ class SCSpider(Process):
                 #Find the proper Encoding of the byte_string that urlopen has returned and decoded to it before you pass it to the lxml.html parser  
                 if xhtml[1]:
                     #decode to the proper string Encoding. The incoming from urlopen() is  string is raw_byte string
-                    xhtml_s = xhtml_s.decode(xhtml[1]) 
+                    xhtml_s = xhtml_s.decode(xhtml[1], 'ignore') #'ignore': error handling when invalid UTF (or other) encoding characters are occurring
                 else:
                     #try to figure out weather or not the data are coming with utf-8 encoding.... 
                     #Maybe I don't need this because encoding is retrieved from urlopen() and not the lxml library
                     #OR maybe I do need it because the encoding information are derived from HTTP headers Response
-                    utf_s = UnicodeDammit(xhtml_s, isHTML=True)
-                    if utf_s.unicode:
-                        xhtml_s = utf_s.unicode #Be Careful of what you get
+                    #utf_s = UnicodeDammit(xhtml_s, isHTML=True)
+                    #if utf_s.unicode:
+                    #    xhtml_s = utf_s.unicode #Be Careful of what you get
+                    pass
                 #Parse the XHTML Source fetched by from the GreenThreads
                 xhtml_t = self.parsetoXtree(xhtml_s, clean_xhtml=True)    
                 #While this Process will try to extract URLs, give the tree for PARALLEL Processing from the SCVetGen Thread

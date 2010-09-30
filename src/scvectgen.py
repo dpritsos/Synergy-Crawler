@@ -23,6 +23,21 @@ from lxml.html.clean import Cleaner
 import time
 
 import unicodedata
+
+
+def label_numerically(webpg_vect_l, Gset_terms):
+    new_webpg_vect_l = list()
+    for pg_vect in webpg_vect_l:
+        #enc_pg_vect = pg_vect.keys()
+        #for i in range(len(enc_pg_vect)):
+        #    enc_pg_vect[i] = enc_pg_vect[i].encode("utf-8")
+        libsvm_pg_vect = dict()
+        for pg_term in pg_vect:
+            libsvm_pg_vect[ Gset_terms[pg_term] ] = pg_vect[pg_term]
+        new_webpg_vect_l.append( libsvm_pg_vect )
+    return new_webpg_vect_l
+
+
     
 class SCVectGen(Thread): 
     """SCVectGen:"""    
@@ -102,6 +117,20 @@ class SCVectGen(Thread):
         filename = str( len(webpg_l) ) + "-" + base_url_str + "_CORPUS_VECTORS"
         if self.save_dct_lst( filename, webpg_vect_l, webpg_l ):
             print( str( xhtml_d['base_url'] ) + "_CORPUS_VECTORS: SAVED!" )
+        
+        ################################################# NEEDS DEBUGGING ###########################################
+        
+        term_list = global_term_dict.keys()
+        terms_num_dict = dict()
+        for i in xrange(len(term_list)):
+            terms_num_dict[ term_list[i] ] = i 
+        print("Term List is Ready %s" % len(term_list))
+        num_label_test = label_numerically(webpg_vect_l, terms_num_dict)
+        print("New Numerical Dict ready %s" % len(num_label_test))
+        print("Sample %s" % num_label_test[0])
+        filename = str( len(webpg_l) ) + "-" + base_url_str + "_NUM_TEST"
+        if self.save_dct_lst( filename, num_label_test, webpg_l ):
+            print( str( xhtml_d['base_url'] ) + "_NUM_TEST: SAVED!" )
        
     def gterm_d_gen(self, webpg_vect_l):
         set_vect = dict()
@@ -144,7 +173,7 @@ class SCVectGen(Thread):
             for i in range(len(index)):
                 f.write(index[i] + " => ")
                 for rec in records[i]:
-                    f.write(rec + ":"  + str(records[i][rec]) + "\t") 
+                    f.write( str(rec) + ":"  + str(records[i][rec]) + "\t") 
                 f.write("\n") 
         except:
             print("ERROR WRITTING FILE: %s" % filename)
