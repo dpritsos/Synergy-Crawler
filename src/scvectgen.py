@@ -24,19 +24,7 @@ import time
 
 import unicodedata
 
-
-def label_numerically(webpg_vect_l, Gset_terms):
-    new_webpg_vect_l = list()
-    for pg_vect in webpg_vect_l:
-        #enc_pg_vect = pg_vect.keys()
-        #for i in range(len(enc_pg_vect)):
-        #    enc_pg_vect[i] = enc_pg_vect[i].encode("utf-8")
-        libsvm_pg_vect = dict()
-        for pg_term in pg_vect:
-            libsvm_pg_vect[ Gset_terms[pg_term] ] = pg_vect[pg_term]
-        new_webpg_vect_l.append( libsvm_pg_vect )
-    return new_webpg_vect_l
-
+from scvectorhandlingtools import *
 
     
 class SCVectGen(Thread): 
@@ -53,7 +41,14 @@ class SCVectGen(Thread):
     
     def run(self):
         """SCVectGen's main function"""
-        reg_obj = re.compile(r'[^\s]')
+        nonwhite_str = re.compile(r'\S')
+        alphanum_str = re.compile(r'[^.(),!@#$%&*-_=+/\\?><"\':]')
+        url_str = re.compile(r'\b(([\w-]+://?|www[.])[^\s()<>]+(?:\([\w\d]+\)|([^[:punct:]\s]|/)))')
+        date_str = re.compile(r'^(19|20)\d\d[- /.](0[1-9]|1[012])[- /.](0[1-9]|[12][0-9]|3[01])$')
+        word_str = re.compile(r'\b\w+\b')
+        #word_str = re.compile(r'\b(\w+)')
+        ############################################ fix Regular expressions ###############################
+        dot_chr = re.compile(r'[.]')
         #reg_obj = re.compile(r'')
         extract_txt = lxml.etree.XPath("//text()")
         webpg_l = list()
@@ -82,15 +77,7 @@ class SCVectGen(Thread):
             xcharset = xhtml_d['charset']
             if not xcharset:
                 xcharset = "utf8"
-            #print("DUE: %s => %s" % (isinstance(xhtml_t, lxml.html.HtmlElement), "") )
-            #cleaner = Cleaner( scripts=True, javascript=True, comments=True, style=True,\
-            #               links=True, meta=True, page_structure=False, processing_instructions=True,\
-            #               embedded=True, annoying_tags=True, remove_unknown_tags=True )#meta=False because we need MetaInfo
-            #xhtml_s = cleaner.clean_html(xhtml_s)
-            #xhtml_t = lxml.etree.fromstring(xhtml_s, parser=htmlparser_r)
             xhtml_text_l = extract_txt(xhtml_t) #.xpath("//text()") 
-            #NFKC: normalised to composed Unicode form with transformation of special 
-            #characters to composed from too, for consistent text processing
             for i in range(len(xhtml_text_l)):
                 xhtml_text_l[i] = unicodedata.normalize('NFKC', xhtml_text_l[i].decode()) 
             #xhtml_text_l.sort() #not really necessary 
@@ -98,8 +85,19 @@ class SCVectGen(Thread):
             for terms_s in xhtml_text_l:
                 terms_l = terms_s.split(" ")
                 for term in terms_l:
-                    term_chr_l = reg_obj.findall(term)
-                    term = "".join(term_chr_l) 
+                    term_chr_l = nonwhite_str.findall(term)
+                    term = "".join(term_chr_l)
+                    url_term = url_str.findall(term)
+                    if url_term:
+                        term = url_term[0]
+                    else:
+                        date_term = date_str.findall(term)
+                        if date_term:
+                            term = date_term[0]
+                        else:
+                            word_term = word_str.findall(term)
+                            term = word_term
+                    #term = "".join(term_chr_l) 
                     if term in xhtml_TF: #if the dictionary of terms has the 'terms' as a key 
                         xhtml_TF[term] += 1
                     elif term != "":
@@ -108,17 +106,17 @@ class SCVectGen(Thread):
             webpg_l.append( xhtml_d['url_resp'] )
             #Append the Term Vector of the xtree to the list of Web Pages' Vectors
             webpg_vect_l.append(xhtml_TF)
-        global_term_dict = self.gterm_d_gen(webpg_vect_l) 
+        global_term_dict = gterm_d_gen(webpg_vect_l) 
         print(len(webpg_l), len(webpg_vect_l))
         base_url_str = xhtml_d['base_url'].replace("http://", "")
         filename = str( len(webpg_l) ) + "-" + base_url_str  + "_CORPUS_DICTIONARY"   
-        if self.save_dct(filename, global_term_dict ):
+        if save_dct(filename, global_term_dict ):
             print( str( xhtml_d['base_url'] ) + "_GLOBAL_TERMS_DICTIONARY: SAVED!" )
         filename = str( len(webpg_l) ) + "-" + base_url_str + "_CORPUS_VECTORS"
-        if self.save_dct_lst( filename, webpg_vect_l, webpg_l ):
+        if save_dct_lst( filename, webpg_vect_l, webpg_l ):
             print( str( xhtml_d['base_url'] ) + "_CORPUS_VECTORS: SAVED!" )
         
-        ################################################# NEEDS DEBUGGING ###########################################
+        #################################################
         
         term_list = global_term_dict.keys()
         terms_num_dict = dict()
@@ -129,70 +127,16 @@ class SCVectGen(Thread):
         print("New Numerical Dict ready %s" % len(num_label_test))
         print("Sample %s" % num_label_test[0])
         filename = str( len(webpg_l) ) + "-" + base_url_str + "_NUM_TEST"
-        if self.save_dct_lst( filename, num_label_test, webpg_l ):
+        if save_dct_lst( filename, num_label_test, webpg_l ):
             print( str( xhtml_d['base_url'] ) + "_NUM_TEST: SAVED!" )
        
-    def gterm_d_gen(self, webpg_vect_l):
-        set_vect = dict()
-        #Creat the Global Term Vector of Frequencies
-        for pg_vect in webpg_vect_l:
-            pg_trm_l = pg_vect.keys()
-            for pg_trm in pg_trm_l:
-                if pg_trm in set_vect: 
-                    set_vect[pg_trm] += pg_vect[pg_trm]
-                else:
-                    set_vect[pg_trm] = pg_vect[pg_trm]
-        #set_terms = set_vect.keys()
-        print("Global Terms Dictionary: Ready!")
-        return set_vect
-  
+
+
+
+
+
+
+
+
+
      
-    def save_dct(self, filename, records):
-        """save_dct():"""
-        try:
-            #Codecs needed for saving string that are encoded in UTF8, but I do not need it because strings are already the Proper Encoding form
-            f = codecs.open( "/home/dimitrios/Documents/Synergy-Crawler/web_page_vectors/" + filename, "w", "utf-8") #change "utf-8" to xcharset
-        except IOError:
-            return None 
-        try: 
-            for rec in records:
-                f.write(rec + " => "  + str(records[rec]) + "\n") # Write a string to a file 
-        except:
-            print("ERROR WRITTING FILE: %s" % filename)
-            f.close()
-        f.close()
-        return True           
-    
-    def save_dct_lst(self, filename, records, index):
-        try:
-            #Codecs needed for saving string that are encoded in UTF8, but I do not need it because strings are already the Proper Encoding form
-            f = codecs.open( "/home/dimitrios/Documents/Synergy-Crawler/web_page_vectors/" + filename, "w", "utf-8") #change "utf-8" to xcharset
-        except IOError:
-            return None 
-        try: 
-            for i in range(len(index)):
-                f.write(index[i] + " => ")
-                for rec in records[i]:
-                    f.write( str(rec) + ":"  + str(records[i][rec]) + "\t") 
-                f.write("\n") 
-        except:
-            print("ERROR WRITTING FILE: %s" % filename)
-            f.close()
-        f.close()
-        return True           
-        
-                
-            
-                        
-            
-            
-            
-            
-        
-        
-        
-        
-        
-        
-        
-        

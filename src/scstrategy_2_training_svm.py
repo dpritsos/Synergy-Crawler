@@ -89,9 +89,7 @@ if __name__ == '__main__':
                 line = "SPIDER %d : DEAD - JOIN\n" % (scspider_ps.index(scspider) + 1)
                 scspider_ps.remove(scspider)
                 print(line)
-            else:
-                if not vects_q.empty():
-                    vects_tu = vects_q.get()
+  
         if len(scspider_ps) ==  0:
             terminate = True
             
@@ -103,14 +101,6 @@ if __name__ == '__main__':
     for scspider in scspider_ps:
         if scspider.is_alive():
             scspider.terminate()
-              
-    #Train One-Class SVM model with the Training-Data Collected by the Spider Above 
-    if not vects_q.empty():
-        vects_tu = vects_q.get()
-        print(vects_tu[0])
-        print(vects_tu[1])
-        print(vects_tu[2])
-        print(vects_tu[3])
         
     print("Thank you and Goodbye!")
     
