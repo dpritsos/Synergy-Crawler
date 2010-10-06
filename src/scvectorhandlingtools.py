@@ -5,8 +5,8 @@
 import eventlet
 import codecs
 from multiprocessing import Process
-
 #from scgenrelerner_svmbased import *
+
 
 ################################################ MULTI-PROCESSING INDEXING #########################################################    
 def make_libsvm_sparse_vect(self, webpg_vect_l):
@@ -41,7 +41,6 @@ def make_libsvm_sparse_vect(self, webpg_vect_l):
     return (new_webpg_vect_l)
 ################################################
 
-
 def gterm_d_gen(webpg_vect_l):
     set_vect = dict()
     #Creat the Global Term Vector of Frequencies
@@ -55,11 +54,10 @@ def gterm_d_gen(webpg_vect_l):
     #set_terms = set_vect.keys()
     print("Global Terms Dictionary: Ready!")
     return set_vect
-
     
-def load_dict(filepath, filename):
+def load_dict(filepath, filename, force_lower_case=False):
     try:
-        f = open( filepath + str(filename), "r" )
+        f = codecs.open( filepath + str(filename), "r")
     except IOError, e:
         print("FILE %s ERROR: %s" % (filename,e))
         return None
@@ -67,8 +65,12 @@ def load_dict(filepath, filename):
     vect_dict = dict()
     try:
         for fileline in f:
-            line = fileline.split(" => ") #BE CAREFULL with SPACES
-            vect_dict[ line[0] ] = line[1]
+            line = fileline.replace('\n', '')
+            line = line.split(" => ") #BE CAREFULL with SPACES
+            if force_lower_case: 
+                vect_dict[ line[0].lower() ] = float( line[1] )
+            else:
+                vect_dict[ line[0] ] = float( line[1] )
     except:
         f.close()
         return None
@@ -76,24 +78,25 @@ def load_dict(filepath, filename):
     #Return the TF Vector    
     return vect_dict  
 
-def merge_to_global_dict(filelist, filepath=None):
+def merge_to_global_dict(filelist, filepath=None, force_lower_case=False):
     if not isinstance(filelist, (list, tuple)) :
         return False
     gpool = eventlet.GreenPool(10)
     filepaths= map( lambda x: filepath, range(len(filelist)) )
+    force_lower= map( lambda x: force_lower_case, range(len(filelist)) )
     #Start Merging the Dictionaries - or Vector of Term Frequencies
-    global_vect = load_dict(filepath, filelist[0])
-    for vect_d in gpool.imap(load_dict, filepaths, filelist[1:]):
+    global_vect = load_dict(filepath, filelist[0], force_lower_case)
+    for vect_d in gpool.imap(load_dict, filepaths, filelist[1:], force_lower):
         for d_trm in vect_d:
             if d_trm in global_vect: 
-                global_vect[d_trm] += vect_d[d_trm]
+                global_vect[d_trm] += vect_d[d_trm] 
             else:
                 global_vect[d_trm] = vect_d[d_trm]
     return global_vect
     
-def load_dict_l(filepath, filename, g_terms_l=None):
+def load_dict_l(filepath, filename, g_terms_d=None, force_lower_case=False):
     try:
-        f = open( filepath + str(filename), "r" )
+        f = codecs.open( filepath + str(filename), "r")
     except IOError, e:
         print("FILE %s ERROR: %s" % (filename,e))
         return None
@@ -104,15 +107,27 @@ def load_dict_l(filepath, filename, g_terms_l=None):
         for fileline in f:
             line = fileline.split(" => ") #BE CAREFULL with SPACES
             wps_l.append( line[0] )
-            composed_terms = line[1].split("\t")
+            composed_terms = line[1].split('\t')
             vect_dict = dict()  
             for comp_term in composed_terms:
-                decomp_term = comp_term.split(":")
-                if g_terms_l == None:
-                    vect_dict[ decomp_term[0] ] = decomp_term[1]
-                else:
-                    #if Globals Term list has been given then find the proper index value for creating the numerically tagged dictionary 
-                    vect_dict[ g_terms_l.index(decomp_term[0]) ] = decomp_term[1]
+                if comp_term == '\n': # or comp_term == ' ':
+                    continue
+                decomp_term = comp_term.split(' : ')
+                if g_terms_d == None:
+                    if force_lower_case:
+                        vect_dict[ decomp_term[0].lower() ] = decomp_term[1]
+                    else:    
+                        vect_dict[ decomp_term[0] ] = decomp_term[1]
+                elif isinstance(g_terms_d, dict):
+                    #if Globals Term list has been given then find the proper index value for creating the numerically tagged dictionary
+                    try:
+                        if force_lower_case:
+                            vect_dict[ g_terms_d[ decomp_term[0].lower() ] ] = float( decomp_term[1] )
+                        else:
+                            vect_dict[ g_terms_d[ decomp_term[0] ] ] = float( decomp_term[1] )
+                    except:
+                        #if you cannot find the term in the global dictionary just drop the term
+                        print("Term \" %s \"not found in the Global Dictionary/Index - Dropped!" % decomp_term[0])
             vect_l.append( vect_dict )
     except:
         f.close()
@@ -159,7 +174,7 @@ def save_dct_lst(filename, records, index):
         for i in range(len(index)):
             f.write(index[i] + " => ")
             for rec in records[i]:
-                f.write( str(rec) + ":"  + str(records[i][rec]) + "\t") 
+                f.write( str(rec) + " : "  + str(records[i][rec]) + "\t") 
             f.write("\n") 
     except:
         print("ERROR WRITTING FILE: %s" % filename)
