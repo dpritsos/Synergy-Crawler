@@ -70,8 +70,8 @@ class SCSpider(Process):
         #urls_number_stop : Stop in a Default Values (if none given from user) for Politeness and because there is no point to have more samples of this site (I think)
         self.urls_number = kwargs.pop("urls_number_stop", 10000)  
         self.webpg_vect_tu = kwargs.pop("webpg_vect_tu", None)
+        self.save_path = kwargs.pop("save_path", None)
         
-    
     def run(self):
         """SCSpider's main function"""
         #Use the netloc (network locator) of the seed url as the base URL that this spider is working on
@@ -88,7 +88,7 @@ class SCSpider(Process):
         disk_keeper_thrd.start()
         #Start a thread that will Analyse the pages for further process. In case none process uses this Analysis the thread will just not start at all
         if self.webpg_vect_tu: 
-            scvectgen_t = SCVectGen(self.webpg_vect_tu, self.xtrees_q, kill_evt=self.kill_evt)
+            scvectgen_t = SCVectGen(self.webpg_vect_tu, self.xtrees_q, kill_evt=self.kill_evt, save_path=self.save_path)
             scvectgen_t.start()
         #Counter for the URLS that have been Followed by the Crawler
         scanned_urls = 0
@@ -212,8 +212,8 @@ class SCSpider(Process):
     def parsetoXtree(self, xhtml_s, clean_xhtml=False):
         if clean_xhtml:
             cleaner = Cleaner( scripts=True, javascript=True, comments=True, style=True,\
-                           links=True, meta=True, page_structure=False, processing_instructions=True,\
-                           embedded=True, annoying_tags=True, remove_unknown_tags=True )#meta=False because we need MetaInfo
+                               links=True, meta=True, page_structure=False, processing_instructions=True,\
+                               embedded=True, annoying_tags=True, remove_unknown_tags=True )#meta=False because we need MetaInfo
             try:
                 xhtml_s = cleaner.clean_html(xhtml_s)
             except:

@@ -148,11 +148,11 @@ def label_numerically(webpg_vect_l, Gset_terms):
         new_webpg_vect_l.append( libsvm_pg_vect )
     return new_webpg_vect_l
 
-def save_dct(filename, records):
+def save_dct(filename, records, filepath=None):
     """save_dct():"""
     try:
         #Codecs needed for saving string that are encoded in UTF8, but I do not need it because strings are already the Proper Encoding form
-        f = codecs.open( "/home/dimitrios/Documents/Synergy-Crawler/web_page_vectors/" + filename, "w", "utf-8") #change "utf-8" to xcharset
+        f = codecs.open( filepath + filename, "w", "utf-8") #change "utf-8" to xcharset
     except IOError:
         return None 
     try: 
@@ -164,10 +164,10 @@ def save_dct(filename, records):
     f.close()
     return True           
     
-def save_dct_lst(filename, records, index):
+def save_dct_lst(filename, records, index, filepath=None):
     try:
         #Codecs needed for saving string that are encoded in UTF8, but I do not need it because strings are already the Proper Encoding form
-        f = codecs.open( "/home/dimitrios/Documents/Synergy-Crawler/web_page_vectors/" + filename, "w", "utf-8") #change "utf-8" to xcharset
+        f = codecs.open( filepath + filename, "w", "utf-8") #change "utf-8" to xcharset
     except IOError:
         return None 
     try: 

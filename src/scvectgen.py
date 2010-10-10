@@ -15,6 +15,7 @@ from StringIO import StringIO
 from collections import deque
 from urlparse import urlparse 
 import hashlib
+import os
 
 import codecs
 
@@ -37,7 +38,19 @@ class SCVectGen(Thread):
         self.pnum = SCVectGen.Num 
         self.webpg_vect_tu = webpg_vect_tu
         self.sc_xtrees = sc_xtrees 
-        self.kill_evt = kwargs.pop("kill_evt", multiprocessing.Event().clear()) 
+        self.kill_evt = kwargs.pop("kill_evt", multiprocessing.Event().clear())
+        self.save_path = kwargs.pop("save_path", "/home/dimitrios/Documents/Synergy-Crawler/web_page_vectors/")
+        #create the path where the files created from SCVectGen will be saved
+        if self.save_path and not os.path.isdir(self.save_path):
+            os.mkdir(self.save_path)
+        if self.save_path and not os.path.isdir((self.save_path + "corpus_dictionaries/")):
+            os.mkdir((self.save_path + "corpus_dictionaries/"))
+        if self.save_path and not os.path.isdir((self.save_path + "corpus_webpage_vectors/")):
+            os.mkdir((self.save_path + "corpus_webpage_vectors/"))
+        if self.save_path and not os.path.isdir((self.save_path + "ngrams_corpus_dictionaries/")):
+            os.mkdir((self.save_path + "ngrams_corpus_dictionaries/"))
+        if self.save_path and not os.path.isdir((self.save_path + "ngrams_corpus_webpage_vectors/")):
+            os.mkdir((self.save_path + "ngrams_corpus_webpage_vectors/"))
     
     def run(self):
         """SCVectGen's main function"""
@@ -47,6 +60,8 @@ class SCVectGen(Thread):
         #Define Regular Expression to extract textual attributes
         ##Whitepace characters [<space>\t\n\r\f\v] matching, for splitting the raw text to terms
         white_spliter = re.compile(r'\s+')
+        ##Export Ngrams => 3Grams
+        tri_grams = re.compile(r'.{3}')
         ##Find URL String. Probably anchor text
         url_str = re.compile(r'(((ftp://|FTP://|http://|HTTP://|https://|HTTPS://)?(www|[^\s()<>.?]+))?([.]?[^\s()<>.?]+)+?(?=.org|.edu|.tv|.com|.gr|.gov|.uk)(.org|.edu|.tv|.com|.gr|.gov|.uk){1}([/]\S+)*[/]?)')
         #######################The above regular expression needs some more work for not incorrectly catching e.g. ".gr/dd/fdfd" or just ".com"
@@ -63,6 +78,7 @@ class SCVectGen(Thread):
         #From here it starts the Process/Thread that analyses the pages
         webpg_l = list()
         webpg_vect_l = list()
+        ngram_vect_l = list()
         while True:
             #print("Running")
             #Checking for termination signal
@@ -94,11 +110,22 @@ class SCVectGen(Thread):
                 xhtml_text_l[i] = unicodedata.normalize('NFKC', xhtml_text_l[i].decode()) 
             #Create the Word Term Frequency Vectors 
             xhtml_TF = dict()
+            #Create the Trigramms Frequency Vectors
+            xhtml_NgF = dict()
             #Define the term list that will be used for putting the Terms before we start counting them
             terms_l = list()
             for text_line in xhtml_text_l:
                 #Initially split the text to terms separated by whitespaces [ \t\n\r\f\v] 
                 terms_l.extend( white_spliter.split(text_line) )
+            #Find and Count NGrams
+            for term in terms_l:
+                for i in range(len(term)):
+                    Ngrms_l = tri_grams.findall(term[i:])
+                    for tri_g in Ngrms_l:
+                        if tri_g in xhtml_NgF: #if the dictionary of terms has the 'terms' as a key 
+                            xhtml_NgF[tri_g] += 1
+                        elif tri_g: #None empty strings are accepted 
+                            xhtml_NgF[tri_g] = 1
             #Count and remove the Numbers form the terms_l
             num_free_tl = list()
             for term in terms_l:
@@ -134,25 +161,6 @@ class SCVectGen(Thread):
                     comma_free_tl.append(term)
             #use the comma_free terms list as the terms list to continue processing
             terms_l = comma_free_tl
-            #Eliminate and count URL(s) the ones that are more or less properly formed (see the regex)
-            """ 
-            url_free_tl = list()
-            for term in terms_l:
-                url_substrs_l = url_str.findall(term)
-                if url_substrs_l:
-                    if len(url_substrs_l) > 1:
-                        print("\nThe case of more than on URL matching in a list of non-whitespace terms is not predicted: Crawler Halts\n")
-                        self.kill_evt.set()
-                        break
-                    #The term it seems to be a proper URL. So add it to the TF dict or count it
-                    if term in xhtml_TF: #if the dictionary of terms has the 'terms' as a key 
-                        xhtml_TF[term] += 1
-                    else:
-                        xhtml_TF[term] = 1
-                else:
-                    url_free_tl.append( term )
-            #Keep only the non-url terms because they have already add and counted in the TF list                  
-            terms_l = url_free_tl """
             #Split term to words upon dot (.) and dot needs special treatment because we have the case of . or ... and so on
             dot_free_tl = list()
             for term in terms_l:
@@ -228,15 +236,26 @@ class SCVectGen(Thread):
             webpg_l.append( xhtml_d['url_resp'] )
             #Append the Term Vector of the xtree to the list of Web Pages' Vectors
             webpg_vect_l.append(xhtml_TF)
-        global_term_dict = gterm_d_gen(webpg_vect_l) 
-        print(len(webpg_l), len(webpg_vect_l))
+            #Append the Ngram Vector of the xtree ot the list of Web Pages' Vectors
+            ngram_vect_l.append(xhtml_NgF)
+        global_term_dict = gterm_d_gen(webpg_vect_l)
+        global_ngram_dict = gterm_d_gen(ngram_vect_l)  
+        print(len(webpg_l), len(webpg_vect_l), len(ngram_vect_l))
         base_url_str = xhtml_d['base_url'].replace("http://", "")
-        filename = str( len(webpg_l) ) + "-" + base_url_str  + "_CORPUS_DICTIONARY"   
-        if save_dct(filename, global_term_dict ):
-            print( str( xhtml_d['base_url'] ) + "_GLOBAL_TERMS_DICTIONARY: SAVED!" )
-        filename = str( len(webpg_l) ) + "-" + base_url_str + "_CORPUS_VECTORS"
-        if save_dct_lst( filename, webpg_vect_l, webpg_l ):
-            print( str( xhtml_d['base_url'] ) + "_CORPUS_VECTORS: SAVED!" )
+        #Save Term Frequency Dictionaries 
+        filename = str( len(webpg_l) ) + "-" + base_url_str  + ".CDICTs"   
+        if save_dct(filename, global_term_dict, (self.save_path + "corpus_dictionaries/") ):
+            print( str( xhtml_d['base_url'] ) + " CORPUS TERMS DICTIONARY: SAVED!" )
+        filename = str( len(webpg_l) ) + "-" + base_url_str + ".CVECTs"
+        if save_dct_lst( filename, webpg_vect_l, webpg_l, (self.save_path + "corpus_webpage_vectors/") ):
+            print( str( xhtml_d['base_url'] ) + " CORPUS VECTORS: SAVED!" )
+        #Save Ngram Frequency Dictionaries
+        filename = str( len(webpg_l) ) + "-" + base_url_str  + ".CNDICTs"   
+        if save_dct(filename, global_ngram_dict, (self.save_path + "ngrams_corpus_dictionaries/") ):
+            print( str( xhtml_d['base_url'] ) + " NGRAMS CORPUS TERMS DICTIONARY: SAVED!" )
+        filename = str( len(webpg_l) ) + "-" + base_url_str + ".CNVECTs"
+        if save_dct_lst( filename, ngram_vect_l, webpg_l, (self.save_path + "ngrams_corpus_webpage_vectors/") ):
+            print( str( xhtml_d['base_url'] ) + " NGRAMS CORPUS VECTORS: SAVED!" )
         
         #################################################
         """
@@ -252,7 +271,28 @@ class SCVectGen(Thread):
         if save_dct_lst( filename, num_label_test, webpg_l ):
             print( str( xhtml_d['base_url'] ) + "_NUM_TEST: SAVED!" )
        """
-
+       #################################################
+       
+    def extract_urls(self):
+        #Eliminate and count URL(s) the ones that are more or less properly formed (see the regex)
+        """ 
+            url_free_tl = list()
+            for term in terms_l:
+                url_substrs_l = url_str.findall(term)
+                if url_substrs_l:
+                    if len(url_substrs_l) > 1:
+                        print("\nThe case of more than on URL matching in a list of non-whitespace terms is not predicted: Crawler Halts\n")
+                        self.kill_evt.set()
+                        break
+                    #The term it seems to be a proper URL. So add it to the TF dict or count it
+                    if term in xhtml_TF: #if the dictionary of terms has the 'terms' as a key 
+                        xhtml_TF[term] += 1
+                    else:
+                        xhtml_TF[term] = 1
+                else:
+                    url_free_tl.append( term )
+            #Keep only the non-url terms because they have already add and counted in the TF list                  
+            terms_l = url_free_tl """ 
 
 
 
