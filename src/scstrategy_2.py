@@ -70,7 +70,7 @@ if __name__ == '__main__':
     scspider_ps = list()
     for Seed in Seeds:
         #NOTICE: "kill_evt=m.Event()," for having different termination signal for each Spider since for this Strategy (2) they do not collaborate
-        scspider_ps.append( SCSpider(seed=Seed, base_url_drop_none=False, urls_number_stop=10, webpg_vect_tu=vects_q, kill_evt=m.Event(), spider_spoof_id=user_agent, save_path=filepath) )
+        scspider_ps.append( SCSpider(seed=Seed, base_url_drop_none=False, urls_number_stop=1000, webpg_vect_tu=vects_q, kill_evt=m.Event(), spider_spoof_id=user_agent, save_path=filepath) )
     for scspider_p in scspider_ps:    
         scspider_p.start()
     

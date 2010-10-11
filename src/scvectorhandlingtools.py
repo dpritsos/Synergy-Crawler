@@ -7,7 +7,6 @@ import codecs
 from multiprocessing import Process
 #from scgenrelerner_svmbased import *
 
-
 ################################################ MULTI-PROCESSING INDEXING #########################################################    
 def make_libsvm_sparse_vect(self, webpg_vect_l):
     #set_terms.sort()
@@ -40,6 +39,19 @@ def make_libsvm_sparse_vect(self, webpg_vect_l):
     print("make_libsvm_sparse_vect: Second Part Done")
     return (new_webpg_vect_l)
 ################################################
+
+def merge_global_dicts(*gdicts):
+    gterm_index = dict()
+    gterm_list = list()
+    for gdict in gdicts:
+        print("Corpus index len: %s" % len(gdict.keys()) )
+        gterm_list.extend( gdict.keys() )
+    gterm_list.sort() #Remove it if it is too slow
+    for i in range(len(gterm_list)):
+        if not gterm_list[i] in gterm_index:
+            gterm_index[ gterm_list[i] ] = i
+    print("Global Term index len: %s" % len(gterm_index) ) 
+    return gterm_index
 
 def gterm_d_gen(webpg_vect_l):
     set_vect = dict()
