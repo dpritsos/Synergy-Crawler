@@ -16,6 +16,14 @@ def train_svm(training_vectors, class_tags=None):
     print("Done!")
     return svm_m
 
+def tf_abv_thrld(global_vect_l, tf_threshold=0):
+    for line in global_vect_l:
+        dkeys = line.keys()
+        for key in dkeys:
+            if line[key] < tf_threshold:
+                line[key] = float( 0 )
+    return global_vect_l
+
 def tf2tfnorm(global_vect_l, div_by_max=False):
     if div_by_max:
         for line in global_vect_l:
@@ -24,8 +32,11 @@ def tf2tfnorm(global_vect_l, div_by_max=False):
             for key in dkeys:
                 if line[key] > max:
                     max = line[key]
-            for key in dkeys:
-                line[key] = (line[key]/max)
+            if max > 0:
+                for key in dkeys:
+                    line[key] = (line[key]/max)
+            else:
+                print("tf2tnorm MAX<0 on list line => len %s :: line %s" % (len(line),line))
     else:
         for line in global_vect_l:
             dkeys = line.keys()
@@ -34,6 +45,13 @@ def tf2tfnorm(global_vect_l, div_by_max=False):
                 sum += line[key]
             for key in dkeys:
                 line[key] = line[key]/sum
+    return global_vect_l
+
+def inv_tf(global_vect_l):
+    for line in global_vect_l:
+        dkeys = line.keys()
+        for key in dkeys:
+            line[key] = (1/line[key])
     return global_vect_l
 
 def tf2bin(global_vect_l, tf_threshold=0):
@@ -72,7 +90,7 @@ filepath22 = "/home/dimitrios/Documents/Synergy-Crawler/web_page_vectors/blogs/c
 filepath211 = "/home/dimitrios/Documents/Synergy-Crawler/web_page_vectors/blogs/ngrams_corpus_dictionaries/"
 filepath222 = "/home/dimitrios/Documents/Synergy-Crawler/web_page_vectors/blogs/ngrams_corpus_webpage_vectors/"
 
-TFREQ = 2
+TFREQ = 3
 lower_case = True
 
 ##################### CREAT GLOBAL INDEX FOR BOTH CORPUSSES ##################
@@ -108,9 +126,15 @@ for filename in vector_lists_filelist:
     global_wps_l.extend( wps_l )
     global_vect_l.extend( vect_l )
 #print(wps_l[0])
-#print(vect_l[0])
 #if save_dct_lst('dict_list',  global_vect_l, global_wps_l, filepath1):
 #    print('dict_list: Saved')
+temp = list()
+for line in global_vect_l:
+    if len(line) > 9:
+        temp.append(line)
+    else:
+        print(line)
+global_vect_l = temp
 """
 #EXTEND Page vectors(Dictionaries) with Ngrams
 vector_lists_filelist = [files for path, dirs, files in os.walk(filepath122)]
@@ -125,10 +149,15 @@ for i in range(len(global_vect_l)):
     page_dict = global_vect_l[i]
     page_dict.update( temp_vect_l[i] )
 """
+#########Keep TF above Threshold
+global_vect_l = tf_abv_thrld(global_vect_l, tf_threshold=TFREQ)
 #########Binary from
-global_vect_l = inv_tf2bin(global_vect_l, tf_threshold=TFREQ)
+#global_vect_l = inv_tf2bin(global_vect_l, tf_threshold=TFREQ)
+#global_vect_l = tf2bin(global_vect_l, tf_threshold=TFREQ)
 #########Normalised Frequency form 
-#global_vect_l = tf2tfnorm(global_vect_l, div_by_max=True)
+global_vect_l = tf2tfnorm(global_vect_l, div_by_max=True)
+#########Invert TF
+#global_vect_l = inv_tf(global_vect_l)
           
 print("global_vect_l len %s" % len(global_vect_l))
 
@@ -141,6 +170,13 @@ for filename in vector_lists_filelist2:
     wps_l2, vect_l2 = load_dict_l(filepath22, filename, gterm_index, force_lower_case=lower_case)
     global_wps_l2.extend( wps_l2 )
     global_vect_l2.extend( vect_l2 )
+temp = list()
+for line in global_vect_l2:
+    if len(line) > 9:
+        temp.append(line)
+    else:
+        print(line)
+global_vect_l2 = temp
 """
 #EXTEND Page vectors(Dictionaries) with Ngrams
 vector_lists_filelist = [files for path, dirs, files in os.walk(filepath222)]
@@ -155,17 +191,23 @@ for i in range(len(global_vect_l2)):
     page_dict = global_vect_l2[i]
     page_dict.update( temp_vect_l[i] )
 """
+#########Keep TF above Threshold
+global_vect_l2 = tf_abv_thrld(global_vect_l2, tf_threshold=TFREQ)
 #########Binary From
-global_vect_l2 = inv_tf2bin(global_vect_l2, tf_threshold=TFREQ)
+#global_vect_l2 = inv_tf2bin(global_vect_l2, tf_threshold=TFREQ)
+#global_vect_l2 = tf2bin(global_vect_l2, tf_threshold=TFREQ)
 #########Normalised Frequency form 
-#global_vect_l2 = tf2tfnorm(global_vect_l2, div_by_max=True)
+global_vect_l2 = tf2tfnorm(global_vect_l2, div_by_max=True)
+#########Invert TF
+#global_vect_l2 = inv_tf(global_vect_l2)
+
 
 print("global_vect_l2 %s" % global_vect_l2[0])
 print( "global_vect_l2 len %s" % len(global_vect_l2) )
 #print("Sample %s" % global_vect_l[0])
 
 ############################################### Train SVM ###############################################
-svm_m = train_svm( global_vect_l[0:499] ) #256
+svm_m = train_svm( global_vect_l[0:751] ) #256
 #print("Labels %s" % svm_m.get_labels()) Not working for one-class SVM
 
 ############################################### Evaluate SVM ##############################################
@@ -175,7 +217,7 @@ tp = decimal.Decimal('0')
 tn = decimal.Decimal('0')
 fp = decimal.Decimal('0')
 fn = decimal.Decimal('0')
-total_global_vect_l = global_vect_l[500:] #257
+total_global_vect_l = global_vect_l[752:] #257
 total_global_vect_l.extend(global_vect_l2) 
 for i in range( len(total_global_vect_l) ):
     d = svm_m.predict( total_global_vect_l[i] )
@@ -183,13 +225,13 @@ for i in range( len(total_global_vect_l) ):
         value0 = d
     #print("ValueD %s" % d)
     if d > 0:
-        if i > 442: #299
+        if i > 2999: #299
             fp += 1
         else:
             tp += 1   
         c1 += 1
     else:
-        if i > 442:
+        if i > 2999:
             tn += 1
         else:
             fn += 1

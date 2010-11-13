@@ -9,7 +9,7 @@ import threading
 from threading import Thread 
 import eventlet
 import hashlib
-from urlparse import urlparse
+import urlparse
 
 class DUEUnit(object):
     """DUE: 
@@ -37,7 +37,7 @@ class DUEUnit(object):
         if isinstance(urls, str):
             url_hash = self.__url_hash(urls)
             if self.seen.has_key(url_hash):
-                #print("FOUND IN SEEN LIST: %s" % urls) ####################################### HERE????
+                print("FOUND IN SEEN LIST")
                 return True
             else:
                 url_is_in_files = self.__ust_files(url_hash)
@@ -70,41 +70,35 @@ class DUEUnit(object):
         else:
             return None #Maybe this should be changed by raising an exception
         
-    def savetofile(self, filename=None, file_headers=True):
+    def savetofile(self, filename=None):
         """savetofile(): Stores the whole hash-url dictionary on hard disk. 
             This function is recommended to be used externally from a process monitoring and handles the DUEUnit when 
             the crawler lacks of main memory. Currently the number of dictionary records are recommended to be used as criterion"""
         if not filename:
-            filename =  str( urlparse(self.base_url['url'] ).netloc ) + "." + str( len(self.filelist) ) + ".seenurls"
+            filename = str( self.base['url'] ) + "." + str( len(self.filelist) ) + ".seenurls"
         try:
-            f = open( self.filespath + filename, "w" )
-        except IOError:
-            return None 
-        try:
-            if file_headers:
-                header = "BASE URL: " + str( self.base_url['hashkey'] ) + " => " + str( self.base_url['url'] ) + "/\n"
-                #print header
+            f = open( self.filespath + filename, "w" ) 
+            try:
+                header = "BASE URL: " + str( self.base['hashkey'] ) + " => " + str( self.base['protocol'] ) + "://" + str( self.base['url'] ) + "/\n"
+                print header
                 f.write(header.encode())
-                #print header
-            lines = [ str(hash) + " => " + str(url) + "\n" for hash, url in self.seen.items()] 
-            for line in lines:
-                f.write(line.encode()) # Write a string to a file
-        except:
-            print("ERROR WRITTING FILE: %s" % filename)
-            f.close()
-        #Maybe A finally statement could be used as in previous version but leave it like this to be sure
-        f.close()
+                print header
+                lines = [ str(hash) + " => " + str(url) + "\n" for hash, url in self.seen.items()] 
+                for line in lines:
+                    f.write(line.encode()) # Write a string to a file
+            finally:
+                f.close()
+        except IOError:
+            return None
         #Adding the new file name in the file list
-        #self.filelist.append([f,filename]) #Should I keep f too or it is too big?
-        self.filelist.append(str(filename))
+        self.filelist.append([f,filename])
         #Clears the seen dictionary
         self.seen.clear()
-        return True
                
     def setBase(self, url):
         """This is required for Manager() object in multiprocessing in case is need to be used... I think!"""
-        self.base_url = {'hashkey' : self.__url_hash(url),
-                         'url'     : url }
+        self.base = {'hashkey' : self.__url_hash(url),
+                     'url'     : url }
         
     def __url_hash(self, url):
         """DUEUnit__url_hash(): 
@@ -116,38 +110,30 @@ class DUEUnit(object):
             hash = hashlib.md5()
             hash.update(url)
             #using hexdigest() and not digest() because we have to write the hash codes on utf8 files
-            hashkey = hash.hexdigest()
-            return hashkey 
+            return hash.hexdigest() 
         return None
     
     def __ust_files(self, url_hash=None):
         """DUEUnit.__ust_files: is performing URL Seen Test using history(URL seen) files"""
         if not self.filelist:
-            #print("OUT FILE UST: NO FILES")
+            print("OUT FILE UST: NO FILES")
             return False
-        gpool = eventlet.GreenPool(2) ########### Check This because it is too small for but works for scstrategy_1
+        gpool = eventlet.GreenPool(10000)
         #Make url_hash key to an iteratable [ url_hash, url_hash, url_hash,...]
         iter_url_hash = map( lambda x: url_hash, range(len(self.filelist)) )
         for seen in gpool.imap(self.__ustf, iter_url_hash, self.filelist):
             if seen:
-                #del gpool #it seems not needing it
                 return seen
-        #del gpool #it seems not needing it
         return False
     
     def __ustf(self, url_hash, file=None):
         #print("URL_HASH: %s" % url_hash)
-        #if file[0].closed: 
-        try:
-            f = open( self.filespath + str(file), "r" )
-        except IOError, e:
-            while e:
-                try:
-                    f = open( self.filespath + str(file), "r" )
-                except IOError, e:
-                    pass
-                #print("OUT FILE UST: ERROR - file: %s" % file[1])
-                #return None #Return None to indicate a problem 
+        if file[0].closed: 
+            try:
+                f = open( self.filespath + file[1], "r" )
+            except IOError:
+                print("OUT FILE UST: ERROR")
+                return None #Return None to indicate a problem 
         #The following for loop is an alternative approach to reading lines instead of using f.readline() or f.readlines()
         for fileline in f:
             line = fileline.split(" => ") #BE CAREFULL with SPACES
@@ -177,13 +163,12 @@ class DUEUnit(object):
     def notify_all(self):
         self.conditonal_var.notify_all()
 
-"""
-class IP_DUEUnit(BaseManager): 
-    '''IP_DUEUnit: Make the DUEUnit accessible by Processes
-            IP_ stands for Interprocess'''
 
+ 
+class IP_DUEUnit(BaseManager): 
+    """IP_DUEUnit: Make the DUEUnit accessible by Processes
+            IP_ stands for Interprocess
+    """
     pass
 #BE AWARE it is registered an DUEUnit Class Object and not an Instance of the Class
 IP_DUEUnit.register('DUEUnit', DUEUnit )       
-
-"""

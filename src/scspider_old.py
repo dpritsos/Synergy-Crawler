@@ -1,17 +1,17 @@
 """Synergy-Crawler Spider:"""
-
 import multiprocessing
-from multiprocessing import Process
+from multiprocessing import Pool, Process, Value
 #from eventlet.green import urllib2
 #import urllib2 #use it only in MultiProcessing/Threading not in GreenThreading
 from threading import Thread
 import eventlet 
 from eventlet.green import urllib2 #For GreenThreading not I don't know how it is behaving with MultiProcessing/Threading
-#import urllib2
+import lxml.etree 
 import lxml.html
 from lxml.html.clean import Cleaner
 import lxml.html.soupparser as soup
 from StringIO import StringIO
+from collections import deque
 from urlparse import urlparse 
 import hashlib
 
@@ -21,11 +21,28 @@ from scvectgen import SCVectGen
 
 from BeautifulSoup import UnicodeDammit
 
-#Load custom modules containing the Unit variants that the SCSpider consist of
-from dueunits import DUEUnit
-from linkextractors import LinkExtractor
+from scdueunit import DUEUnit
 
 import time
+
+#Use this function only in case you want to have a Process.Pool() instead of Green.Pool()
+#This is because Process.Pool can not have a class member function as argument 
+#for using the Following fucntion import 
+def ffetchsrc(url):
+    htmlsrc = None
+    socket = None
+    charset = None
+    try:
+        rq = urllib2.Request(url, headers={ 'User-Agent' : 'Mozilla/5.0 (X11; U; Linux x86_64; en-GB; rv:1.9.1.9)' })
+        socket = urllib2.urlopen(rq)
+        htmlsrc = socket.read()
+        charset = socket.info().getparam('charset')
+        socket.close()
+    except:
+        pass
+    #Return a tuple of the HTML source, the character encoding of this source, and its URL 
+    return (htmlsrc, charset, url)
+
 
 class SCSpider(Process): 
     """SCSpider:"""    
@@ -58,21 +75,21 @@ class SCSpider(Process):
     def run(self):
         """SCSpider's main function"""
         #Use the netloc (network locator) of the seed url as the base URL that this spider is working on
-        url = self.urls_l[0]       
-        self.due.setBase(url)
-        #Define a process 
-        fetchers_p = eventlet.GreenPool(1000)
-        green_save_p = eventlet.GreenPool(1000)
+        url = urlparse(self.urls_l[0])
+        hash = hashlib.md5()
+        hash.update(url.scheme + "://" + url.netloc)
+        hashkey = hash.hexdigest()
+        self.due.setBase(url.scheme + "://" +url.netloc)
+        #Define 10000 Green Threads for fetching and lets see how it goes
+        #fetchers_p = Pool(10) #eventlet.GreenPool(10000)
+        fetchers_p = eventlet.GreenPool(100)
         #A thread is constantly checking the DUE seen dictionary is big enough to be saved on disk
         disk_keeper_thrd = Thread(target=self.savedue)
         disk_keeper_thrd.start()
-        """
         #Start a thread that will Analyse the pages for further process. In case none process uses this Analysis the thread will just not start at all
         if self.webpg_vect_tu: 
             scvectgen_t = SCVectGen(self.webpg_vect_tu, self.xtrees_q, kill_evt=self.kill_evt, save_path=self.save_path)
             scvectgen_t.start()
-                    DEPRICATED is should be OUTSIDE the process
-        """
         #Counter for the URLS that have been Followed by the Crawler
         scanned_urls = 0
         #From this line and below the loop this Process is starting 
@@ -112,7 +129,7 @@ class SCSpider(Process):
             for xhtml in fetchers_p.imap(self.fetchsrc, self.urls_l):
                 # ~~~~~~~~ Maybe the following code can be wrapped up from a few sub-Processes or Threads ~~~~~~~~
                 if xhtml[0] == None:
-                    print("SPIDER %d of %d BASE %s" % (self.pnum, SCSpider.Num, self.due.base_url['netloc']))
+                    print("SPIDER %d of %d BASE %s" % (self.pnum, SCSpider.Num, self.due.base_url['url']))
                     print("Empty Page : %s" % xhtml[1])
                     continue
                 else:
@@ -132,16 +149,16 @@ class SCSpider(Process):
                     #    xhtml_s = utf_s.unicode #Be Careful of what you get
                     pass
                 #Parse the XHTML Source fetched by from the GreenThreads
-                xhtml_t = self.parseto_xtree(xhtml_s, clean_xhtml=True)
-                #Expand the xhtml tree dictionary with some date for later process      
+                xhtml_t = self.parsetoXtree(xhtml_s, clean_xhtml=True)    
+                #While this Process will try to extract URLs, give the tree for PARALLEL Processing from the SCVetGen Thread
+                #ELEMENT TREES FROM LXML IT SUPPOSED TO BE THREAD SAFE
                 xhtml_t['charset'] = xhtml[1]
                 xhtml_t['url_req'] = xhtml[2]
                 xhtml_t['url_resp'] = xhtml[3]
-                xhtml_t['base_url'] = self.due.base_url 
-                
-                
-                green_save_p.spawn_n(self.save_xhtml, self.due.base_url['netloc'], xhtml_s, xhtml_t)
-                
+                xhtml_t['base_url'] = self.due.base_url['url'] 
+                #print("IN")
+                self.xtrees_q.put(xhtml_t)
+                #print("IN DONE") 
                 #Get every URL Link by performing etree traversal evaluate them and perform UST and them put them either
                 #to the proper DUEUnit (internal or external) or give them to the Green-Threaded (XHTML) Source Fetcher(s)
                 xtree = xhtml_t['xtree']
@@ -149,10 +166,9 @@ class SCSpider(Process):
                     xhtml_troot = xtree.getroot()
                 else:
                     continue
-                
-                #if xhtml_troot is None: 
+                if xhtml_troot is None: 
                     #if there is not any html etree root skip the URL processing because there is None
-                #    continue
+                    continue
                 count = 0
                 for link in xhtml_troot.iterlinks():
                     if link[1] == 'href':
@@ -160,11 +176,12 @@ class SCSpider(Process):
                         or link[2].find(".ico") == -1:
                             parsed_u = urlparse(link[2])
                             prsd_url = str(parsed_u.scheme + "://" + parsed_u.netloc)
-                            baseurl = str(self.due.base_url['scheme'] + "://" +  self.due.base_url['netloc'])
-                            if  prsd_url == baseurl:
+                            if  prsd_url == self.due.base_url['url']:
                                 seen = self.ust(link[2])
                                 if not seen:
                                     count += 1 
+                                    if self.due.seen_len() < 30:
+                                        pass #print("SPIDER %d APPEND_LINKS %s SEEN-LIST %s" % (self.pnum, count, self.due.seen_len()))
                                     tmp_urls_l.append(link[2])
                                 #else: means discarding this previously seen URL links
                             else:
@@ -190,8 +207,11 @@ class SCSpider(Process):
         self.due.notify_all()
         self.due.release()
         disk_keeper_thrd.join()
+        #Terminate scvectgen_t only in case it has previously been started to run
+        if self.webpg_vect_tu:
+            scvectgen_t.join()
     
-    def parseto_xtree(self, xhtml_s, clean_xhtml=False):
+    def parsetoXtree(self, xhtml_s, clean_xhtml=False):
         if clean_xhtml:
             cleaner = Cleaner( scripts=True, javascript=True, comments=True, style=True,\
                                links=True, meta=True, page_structure=False, processing_instructions=True,\
@@ -208,7 +228,7 @@ class SCSpider(Process):
         #Parse the XHTML Source 
         parsing_errors = list()    
         try:           
-            xhtml_t = lxml.html.parse( StringIO(xhtml_s), parser=htmlparser, base_url=(self.due.base_url['scheme'] + "://" +self.due.base_url['netloc']) )
+            xhtml_t = lxml.html.parse(StringIO(xhtml_s), parser=htmlparser, base_url=self.due.base_url['url'])
         except:
         #except ValueError, error:
         #except lxml.etree.XMLSyntaxError, error:
@@ -217,9 +237,9 @@ class SCSpider(Process):
             #print("PARSE ERROR (no recovery mode): %s" % error)
             #parsing_errors.append(error)
             try:
-                xhtml_t = lxml.html.parse(StringIO(xhtml_s), parser=htmlparser_rcv, base_url=(self.due.base_url['scheme'] + "://" +self.due.base_url['netloc']) ) #StringIO(xhtml_s)
-            except Exception as error:
-                print("PARSE ERROR (recovery mode): %s" % error)
+                xhtml_t = lxml.html.parse(StringIO(xhtml_s), parser=htmlparser_rcv, base_url=self.due.base_url['url']) #StringIO(xhtml_s)
+            except:
+                print("PARSE ERROR (recivery mode): %s" % error)
                 parsing_errors.append(error)
                 try:
                     print('DA ZOUP')
@@ -257,50 +277,10 @@ class SCSpider(Process):
             charset = socket.info().getparam('charset')
             url_resp = socket.geturl()
             socket.close()
-        except IOError as e:
-            resp = e #.read()
-            #resp = e.read()
-            print("FETCH ERRORS(urllib2): %s" % resp)
-            
+        except HTTPError as e:
+            print("HTTP ERROR: %s" % e.read())
         #Return a tuple of the HTML source, the character encoding of this source, and its URL 
         return (htmlsrc, charset, url_req, url_resp)
-    
-    def save_xhtml(self, root_path, xhtml_source, xhtml_t):
-        assert os.path.isdir(root_path)
-        
-        
-        if filespath and not os.path.isdir(self.filespath):
-            os.mkdir(self.filespath)
-        filename =  str( self.base_url['netloc'] ) + ".html" 
-        try:
-            try:
-                f = os.open( self.filespath + filename, os.O_CREAT | os.O_WRONLY, stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH | stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
-            except Exception as e:
-                print("DUE Unit: Error while Creating file - Error: %s" % e)
-                ret_signal = None 
-            #Place a file-object wrapper around the file Descriptor
-            fobj = os.fdopen(f, "w", 1)       
-            #Place an Encoding Wrapper to assure the file Writing to be performed with UTF-8 encoding
-            fenc = codecs.EncodedFile(fobj,'utf-8')
-        except Exception as e:
-            print("DUE Unit: Error while Saving file - Error: %s" % e)
-            #Return None for the Spider to know that some error occurred for deciding what to do with it 
-            ret_signal = None 
-        else:
-            lines = [ url for url in self.seen.keys() ]
-            for line in lines:
-                #os.write(f, line)
-                fenc.write( str(line) + "\n" ) # Write a string to a file #line.encode()
-            #Adding the new file name in the file list
-            self.filelist.append(str(filename))
-            #Clears the seen dictionary
-            self.seen.clear()
-            #Return True for the Spider to know that everything went OK
-            ret_signal = True
-        finally:
-            fenc.close()
-            
-        return ret_signal
     
     def savedue(self):
         while not self.kill_evt.is_set():
@@ -312,7 +292,7 @@ class SCSpider(Process):
                 #In case Seen Dictionary is still small Wait (i.e. Sleep)
                 self.due.wait()
             if not self.due.savetofile():
-                print("SCSPIDER: FILE NOT SAVED - HALT")
+                print("FILE NOT SAVED - HALT")
                 self.kill_evt.set()
                 return
             #self.due.notify_all()
