@@ -1,7 +1,6 @@
 
 
-
-from Queue import Queue
+import Queue
 import lxml.etree as etree
 import lxml.html
 from lxml.html.clean import Cleaner as html_clr
@@ -17,51 +16,85 @@ class LinkExtractor(object):
         #Thread pool
         self.__tpool = ThreadPool(100)
         #ETREE queue for the parsed xhtml(s) to be stored
-        self.__etree_q = Queue()
-        self.__extract_txt = etree.XPath("//text()")
+        self.__etree_q = Queue.Queue()
+        self.__site_links_q = Queue.Queue()
+        self.__media_links_q = Queue.Queue()
+        self.__scripts_links_q = Queue.Queue()
+        self.__undefined_links_q = Queue.Queue()
+        #A callable for iterators to return the content of Queues   
+        self.__ret_q = lambda q: q.empty() or q.get()
+        #XPath objects for extracting the URL Types
+        self.__extract_site_urls = etree.XPath("/body/a/href")
+        self.__extract_media_urls = etree.XPath("//src")
+        self.__extract_scripts_urls = etree.XPath("//src")
         
-    def __inter__(self):
-        return self
+    #def __inter__(self):
+    #    return self
     
-    def next(self):
-        if :
-            raise StopIteration
-        else:
+    #def next(self):
+    #    if :
+    #        raise StopIteration
+    #    else:
     
     def feed(self, xhtml):
-        self.__tpool.map(func, callback, iterable)
-        self.__tpool.dispatch()
+        self.__tpool.dispatch(self.__parseto_xtree, xhtml, self.__callback_chain)
         
-        t_list[ t_list.count() ].start()
-        
-        pass
-        
+    def l_feed(self, xhtml_l):
+        self.__tpool.map(self.__parseto_xtree,  self.__callback_chain, xhtml_l)
     
-    def of_sites(self, xhtml):
-        pass
+    def __callback_chain(self, etree):
+        #Find Links to other site and put them in the queue 
+        site_links = self.site_links(etree)
+        if site_links: 
+            self.__site_links_q.put(site_links)
+        #Find Links of media and put them in the queue
+        media_links = self.media__links(etree)
+        if media_links:
+            self.__media_links_q.put(media_links)
+        #Find Links of scripts and put them in the queue
+        script_links = self.of_string()
+        if script_links:
+            self.__scripts_links_q.put(script_links)
+        undefined_links = self.undefined_links()
+        if undefined_links:
+            self.__undefined_links_q.put(undefined_links)
     
-    def of_media(self, xhtml):
+    def all_links(self, etree):
         pass
-    
-    def of_scripts(self, xhtml):
-        pass
-    
-    def undefined_links(self):
-        pass
-    
-    def of_sites_iter(self):
-        pass
-    
-    def of_media_iter(self):
-        pass
-    
-    def of_scripts_iter(self):
-        pass
-    
-    def undefined_iter(self):
+            
+    def site_links(self, etree):
         pass
     
-    def __parseto_xtree(self, xhtml_s, etree_q, clean_xhtml=False):
+    def media_links(self, etree):
+        pass
+    
+    def scripts_links(self, etree):
+        pass
+    
+    def undefined_links(self, etree):
+        pass
+    
+    def all_links_iter(self):
+        try:
+            etree = self.__etree_q.get(2)
+        except Queue.Empty:
+            
+        else:    
+            return etree.iterlinks()
+    
+    def site_links_iter(self):
+        return iter( self.__ret_q(self.__site_links_q), True)
+    
+    def media_links_iter(self):  
+        return iter( self.__ret_q(self.__media_links_q), True)
+    
+    def scripts_links_iter(self):
+        return iter( self.__ret_q(self.__scripts_links_q), True)
+    
+    def undefined_links_iter(self):
+        return iter( self.__ret_q(self.__undefined_links_q), True)
+    
+    def __parseto_xtree(self, xhtml_s, clean_xhtml=False):
         if clean_xhtml:
             xhtml_clr = html_clr( scripts=True, javascript=True, comments=True, style=True,\
                                   links=True, meta=True, page_structure=False, processing_instructions=True,\
@@ -80,7 +113,7 @@ class LinkExtractor(object):
             except Exception as e:
                 raise Exception("LinkExtractor Error: %s" % e)
         #Return the etree just created
-        etree_q.put( etree )
+        return etree
         
         
         
