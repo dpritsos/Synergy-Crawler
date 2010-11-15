@@ -23,7 +23,7 @@ class DUEUnit(object):
         self.seen = dict() #Keeps the URLs with or without the Base part
         self.filelist = list()
         self.conditonal_var = threading.Condition()
-        self.green_pool = GreenPool(100)
+        self.green_pool = GreenPool(1)
         if path:
             self.filespath = path
         else:

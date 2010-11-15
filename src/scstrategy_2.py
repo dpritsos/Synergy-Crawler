@@ -52,7 +52,7 @@ if __name__ == '__main__':
     
     Blogs_Seeds = list()
     #SEEDS FOR BLOGS
-    filepath2 = "/home/dimitrios/Documents/Synergy-Crawler/web_page_vectors/blogs/"
+    filepath2 = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/blogs/"
     Blogs_Seeds = ["http://blogs.skype.com",
                    "http://blogs.technet.com",
                    "http://blogs.reuters.com",
@@ -62,7 +62,7 @@ if __name__ == '__main__':
                    "http://blogs.computerworld.com",
                    "http://blogs.adobe.com",
                    "http://blogs.howstuffworks.com",
-                   "http://blogs.baltimoreravens.com ",
+                   "http://blogs.baltimoreravens.com",
                    "http://blogs.telegraph.co.uk",
                    "http://blogs.abcnews.com",
                    "http://kevin.lexblog.com",
@@ -72,23 +72,43 @@ if __name__ == '__main__':
                    "http://pagingdrgupta.blogs.cnn.com",
                    "http://a2zhomeschool.com" ]
     
+    Blogs_Seeds2 = ["http://blogs.ft.com",
+                   "http://www.mnprblog.com",
+                   "http://blogs.babycenter.com",
+                   "http://searchengineland.com",
+                   "http://elementary-school.blogspot.com",
+                   "http://blog.newsok.com/",
+                   "http://blogs.mybandra.com/",
+                   "http://blogs.adobe.com",
+                   "http://blogs.cornellcollege.edu",
+                   "http://weblogs.sun-sentinel.com",
+                   "http://nabbschoolblogs.net",
+                   "http://blogs.columbian.gwu.edu",
+                   "http://www.wi-ski.com",
+                   "http://www.virtualfilmclub.org.uk",
+                   "http://westseattleblog.com",
+                   "http://blog.doostang.com",
+                   "http://blog.mapquest.com",
+                   "http://blogpreston.co.uk" ]
+    
+    
     ProdCompany_Seeds = list()
     #SEEDS FOR BLOGS
-    filepath3 = ["/home/dimitrios/Documents/Synergy-Crawler/web_page_vectors/product_companies/",
-                 "http://www.thenorthface.com ",
-                 "http://marmot.com",
-                 "http://www.salomon.com",
-                 "http://www.columbia.com",
-                 "http://www.nike.com/nikeos/p/nikegolf/en_US",
-                 "http://www.puma.com",
-                 "http://www.apple.com",
-                 "http://www.htc.com",
-                 "http://www.htc.com/europe/",
-                 "http://www.nokiausa.com",
-                 "http://h40059.www4.hp.com/uk/homelaptops",
-                 "http://www.usa.canon.com",
-                 "http://www.toshiba.co.uk",
-                 "http://www.compaq.com" ]
+    filepath3 = "/home/dimitrios/Documents/Synergy-Crawler/web_page_vectors/product_companies/"
+    PCmp_Seeds = ["http://www.thenorthface.com ",
+                  "http://marmot.com",
+                  "http://www.salomon.com",
+                  "http://www.columbia.com",
+                  "http://www.nike.com/nikeos/p/nikegolf/en_US",
+                  "http://www.puma.com",
+                  "http://www.apple.com",
+                  "http://www.htc.com",
+                  "http://www.htc.com/europe/",
+                  "http://www.nokiausa.com",
+                  "http://h40059.www4.hp.com/uk/homelaptops",
+                  "http://www.usa.canon.com",
+                  "http://www.toshiba.co.uk",
+                  "http://www.compaq.com" ]
     
     #Manger process for InterProcess Event() and Simple Queue()
     m = Manager()
@@ -106,7 +126,7 @@ if __name__ == '__main__':
     #for Seed in News_Seeds:
         #NOTICE: "kill_evt=m.Event()," for having different termination signal for each Spider since for this Strategy (2) they do not collaborate
     #    scspider_ps.append( SCSpider(seed=Seed, base_url_drop_none=False, urls_number_stop=100, webpg_vect_tu=vects_q, kill_evt=m.Event(), spider_spoof_id=user_agent, save_path=filepath1) )
-    for Seed in Blogs_Seeds:
+    for Seed in Blogs_Seeds2:
         #NOTICE: "kill_evt=m.Event()," for having different termination signal for each Spider since for this Strategy (2) they do not collaborate
         scspider_ps.append( SCSpider(seed=Seed, base_url_drop_none=False, urls_number_stop=600, kill_evt=m.Event(), spider_spoof_id=user_agent, save_path=filepath2) ) # webpg_vect_tu=vects_q,
     #for Seed in ProdCompany_Seeds:
