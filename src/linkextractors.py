@@ -7,7 +7,7 @@ from lxml.html.clean import Cleaner as html_clr
 import lxml.html.soupparser as soup
 from StringIO import StringIO
 
-#Import the custom threadpool
+#Import the custom thread-pool
 from threadpool import ThreadPool 
 
 class LinkExtractor(object):
@@ -28,13 +28,16 @@ class LinkExtractor(object):
         self.__extract_media_urls = etree.XPath("//src")
         self.__extract_scripts_urls = etree.XPath("//src")
         
-    #def __inter__(self):
-    #    return self
+    def __inter__(self):
+        """Be careful when use the LinkExtractor as iterator"""
+        return self
     
-    #def next(self):
-    #    if :
-    #        raise StopIteration
-    #    else:
+    def next(self):
+        """Be careful as iterotr this class returns etree(s) not URLs links"""
+        if self.__etree_q.empty():
+            raise StopIteration
+        else:
+            return self.__etree_q.get()
     
     def feed(self, xhtml):
         self.__tpool.dispatch(self.__parseto_xtree, xhtml, self.__callback_chain)
@@ -43,24 +46,28 @@ class LinkExtractor(object):
         self.__tpool.map(self.__parseto_xtree,  self.__callback_chain, xhtml_l)
     
     def __callback_chain(self, etree):
+        #Put the etree to the etree-queue for getting all the URLs available
+        self.__etree_q.put(etree)
         #Find Links to other site and put them in the queue 
-        site_links = self.site_links(etree)
+        site_links = self.__site_links(etree)
         if site_links: 
             self.__site_links_q.put(site_links)
         #Find Links of media and put them in the queue
-        media_links = self.media__links(etree)
+        media_links = self.__media__links(etree)
         if media_links:
             self.__media_links_q.put(media_links)
         #Find Links of scripts and put them in the queue
-        script_links = self.of_string()
+        script_links = self.__media_links(etree)
         if script_links:
             self.__scripts_links_q.put(script_links)
-        undefined_links = self.undefined_links()
+        undefined_links = self.__undefined_links()
         if undefined_links:
             self.__undefined_links_q.put(undefined_links)
     
     def all_links(self, etree):
-        pass
+        links = list()
+        for link in etree.iterlinks():
+            links.append(link)
             
     def site_links(self, etree):
         pass
@@ -74,11 +81,23 @@ class LinkExtractor(object):
     def undefined_links(self, etree):
         pass
     
+    def __site_links(self, etree):
+        pass
+    
+    def __media_links(self, etree):
+        pass
+    
+    def __scripts_links(self, etree):
+        pass
+    
+    def __undefined_links(self, etree):
+        pass
+    
     def all_links_iter(self):
         try:
             etree = self.__etree_q.get(2)
         except Queue.Empty:
-            
+            return StopIteration
         else:    
             return etree.iterlinks()
     
@@ -94,7 +113,16 @@ class LinkExtractor(object):
     def undefined_links_iter(self):
         return iter( self.__ret_q(self.__undefined_links_q), True)
     
-    def __parseto_xtree(self, xhtml_s, clean_xhtml=False):
+    def __parseto_xtree(self, xhtml_s):
+        if isinstance(xhtml_s, dict):
+            base_url = xhtml_s.pop("base_url", None)
+            resolve_base = xhtml_s.pop("resolve_base", True)
+            clean_xhtml = xhtml_s.pop("clean_xhtml", False)
+        elif isinstance(xhtml_s, str):
+            clean_xhtml = False
+            base_url = None
+        else:
+            raise Exception("LinkExtractor.__parseto_xtree(): string or dictionary instance expected")
         if clean_xhtml:
             xhtml_clr = html_clr( scripts=True, javascript=True, comments=True, style=True,\
                                   links=True, meta=True, page_structure=False, processing_instructions=True,\
@@ -112,18 +140,12 @@ class LinkExtractor(object):
                 etree = soup.parse(xhtml_s) 
             except Exception as e:
                 raise Exception("LinkExtractor Error: %s" % e)
+        if base_url:
+            eroot = etree.getroot()
+            try:
+                eroot.make_links_absolute(base_url, resolve_base_href=resolve_base)
+            except Exception as e:
+                raise Exception("LinkExtractor.__parseto_xtree() while making links absolute Error: " % e)
         #Return the etree just created
         return etree
         
-        
-        
-            
-            
-        xhtml_troot = xhtml_t.getroot()
-        try:
-            xhtml_troot.make_links_absolute(self.due.base_url['url'], resolve_base_href=True)
-                except:
-                    return {'xtree' : None, 'parsing_errors' : parsing_errors}
-                for i in xhtml_t.iterlinks():
-                    pass
-        return {'xtree' : xhtml_t, 'parsing_errors' : parsing_errors}
