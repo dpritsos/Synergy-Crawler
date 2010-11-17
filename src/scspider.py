@@ -66,7 +66,7 @@ class SCSpider(Process):
         url = self.urls_l[0]       
         self.due.setBase(url)
         #Define a process 
-        gpool = eventlet.GreenPool(1000)
+        gpool = eventlet.GreenPool(100)
         #green_save_p = eventlet.GreenPool(1000)
         #A thread is constantly checking the DUE seen dictionary is big enough to be saved on disk
         disk_keeper_thrd = Thread(target=self.savedue)
