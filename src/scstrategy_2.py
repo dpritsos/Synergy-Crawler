@@ -8,8 +8,6 @@ from multiprocessing.managers import BaseManager
 
 #Import Web Crawlers element modules
 from scspider import SCSpider
-from scvectgen import SCVectGen
-
 
 from Queue import Queue
 
@@ -273,11 +271,58 @@ if __name__ == '__main__':
                "http://www.uwec.edu" ]
     
     filepath5 = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/wiki_pages/"
-    WikiPages = ["http://en.wikipedia.org/wiki/Main_Page",
-                 "http://www.njc.edu.sg",
-                 "http://wiki.mobileread.com/wiki/Main_Page"]
+    WikiPages = ["http://en.wikipedia.org/wiki/Main_Page"]
+                 #"http://www.njc.edu.sg",
+                 #"http://wiki.mobileread.com/wiki/Main_Page"]
+                
+    filepath6 = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/forum/"
+    Forum1 = ["http://www.sbrforum.com",
+              "http://www.forumw.org",
+              "http://forum.joomla.org",
+              "http://www.kde-forum.org",
+              "http://ubuntuforums.org",
+              "http://www.ruby-forum.com",
+              "http://www.python-forum.org/pythonforum/index.php",
+              "http://forums.onlinebookclub.org",
+              "http://www.bookclubforum.co.uk",
+              "http://www.fanforum.com",
+              "http://www.dance-forums.com",
+              "http://www.digitalspy.co.uk",
+              "http://www.dance.net",
+              "http://www.danceforums.net",
+              "http://www.uk-dance.co.uk",
+              "http://forums.televisionwithoutpity.com",
+              "http://www.theinternetforum.co.uk",
+              "http://forums.jokersupdates.com/ubbthreads" ]
     
+    Forum2 = ["http://www.satelliteguys.us",
+              "http://dancingmood.net",
+              "http://www.liondancing.org",
+              "http://www.geekstogo.com",
+              "http://www.forumforgeeks.com",
+              "http://www.ppcgeeks.com",
+              "http://www.theoutdoorsforum.com",
+              "http://forums.outdoorsdirectory.com",
+              "http://www.outdoorsmenforum.ca",
+              "http://christianoutdoorsman.com",
+              "http://www.jimsbeerkit.co.uk/forum/index.php",
+              "http://www.thebrewingnetwork.com/forum",
+              "http://forums.morebeer.com",
+              "http://www.mrbeerfans.com/ubbthreads",
+              "http://www.mycarforum.com",
+              "http://www.carsforums.com",
+              "http://www.carforums.net",
+              "http://www.autocar.co.uk/Forums/default.aspx" ]
     
+    Forum3 = ["http://sportscarforums.com",
+              "http://www.britishcarforum.com",
+              "http://www.caraudioforum.com",
+              "http://modifiedcarforums.com",
+              "http://www.ecocarforum.com",
+              "http://www.slotforum.com",
+              "http://www.autocareforum.com",
+              "http://www.apteraforum.com",
+              "http://www.chinacarforums.com" ]
     
     #Manger process for InterProcess Event() and Simple Queue()
     m = Manager()
@@ -292,9 +337,9 @@ if __name__ == '__main__':
     
     #Start the SCSpider restricted to scan the pages of one WebSite
     scspider_ps = list()
-    for Seed in WikiPages:
+    for Seed in Forum2:
         #NOTICE: "kill_evt=m.Event()," for having different termination signal for each Spider since for this Strategy (2) they do not collaborate
-        scspider_ps.append( SCSpider(seed=Seed, base_url_drop_none=False, urls_number_stop=1000, kill_evt=m.Event(), spider_spoof_id=user_agent, save_path=filepath5) )
+        scspider_ps.append( SCSpider(seed=Seed, base_url_drop_none=False, urls_number_stop=200, kill_evt=m.Event(), spider_spoof_id=user_agent, save_path=filepath6) )
     for scspider_p in scspider_ps:    
         scspider_p.start()
     

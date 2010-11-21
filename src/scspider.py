@@ -18,8 +18,6 @@ import hashlib
 
 from Queue import Queue
 
-from scvectgen import SCVectGen
-
 from BeautifulSoup import UnicodeDammit
 
 #Load custom modules containing the Unit variants that the SCSpider consist of
@@ -102,6 +100,7 @@ class SCSpider(Process):
             tmp_urls_l = list() #SHOULD BE HERE
             #Start Processing WebPages (in fact sockets to them) which a Pool of GreenThreads is harvesting Asynchronously  
             #for page_soc in fetchers_p.imap_unordered(ffetchsrc, self.urls_l):
+            time.sleep(10)
             for xhtml in gpool.imap(self.fetchsrc, self.urls_l):
                 #Feed the link Extractor with the new-coming XHTML(s) if not empty
                 if xhtml[0]:
