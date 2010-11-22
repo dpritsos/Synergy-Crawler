@@ -36,7 +36,7 @@ class VectGen(object):
         self.ngram_vect_l = list()
         #Defin XPath objects to extract (X)HTML attributes
         ##Extract Text
-        self.extract_txt = lxml.etree.XPath("//text()")
+        self.extract_txt = lxml.etree.XPath("/html/body//text()")
         #Define Regular Expression to extract textual attributes
         ##Whitepace characters [<space>\t\n\r\f\v] matching, for splitting the raw text to terms
         self.white_spliter = re.compile(r'\s+')

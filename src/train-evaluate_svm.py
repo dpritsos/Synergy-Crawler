@@ -15,7 +15,7 @@ def train_svm(training_vectors, class_tags=None):
         class_tags = [0]*len(training_vectors)
     print(len(class_tags)) 
     prob = svm_problem(class_tags, training_vectors)
-    model_params = svm_parameter('-s 2 -t 0 -n 0.7') #svm_type=ONE_CLASS, kernel_type=LINEAR, nu=0.7)
+    model_params = svm_parameter('-s 2 -t 0 -n 0.5') #svm_type=ONE_CLASS, kernel_type=LINEAR, nu=0.7)
     svm_m = svm_train(prob, model_params)
     print("Done!")
     return class_tags, svm_m
@@ -83,17 +83,17 @@ print("START")
 
 #File path where to find files
 ##Define paths for NEWs Corpus
-filepath1 = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/news/raw/"
-filepath11 = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/news/raw/corpus_dictionaries/" 
-filepath12 = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/news/raw/corpus_webpage_vectors/"
-filepath111 = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/news/raw/ngrams_corpus_dictionaries/" 
-filepath122 = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/news/raw/ngrams_corpus_webpage_vectors/"
+filepath1 = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/news/"
+filepath11 = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/news/corpus_dictionaries/" 
+filepath12 = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/news/corpus_webpage_vectors/"
+filepath111 = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/news/ngrams_corpus_dictionaries/" 
+filepath122 = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/news/ngrams_corpus_webpage_vectors/"
 ##Define paths for BLOGs Corpus
-filepath2 = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/blogs/raw/"
-filepath21 = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/blogs/raw/corpus_dictionaries/"
-filepath22 = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/blogs/raw/corpus_webpage_vectors/"
-filepath211 = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/blogs/raw/ngrams_corpus_dictionaries/"
-filepath222 = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/blogs/raw/ngrams_corpus_webpage_vectors/"
+filepath2 = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/product_companies/"
+filepath21 = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/product_companies/corpus_dictionaries/"
+filepath22 = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/product_companies/corpus_webpage_vectors/"
+filepath211 = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/product_companies/ngrams_corpus_dictionaries/"
+filepath222 = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/product_companies/ngrams_corpus_webpage_vectors/"
 
 TFREQ = 1
 lower_case = True

@@ -47,9 +47,11 @@ def merge_global_dicts(*gdicts):
         print("Corpus index len: %s" % len(gdict.keys()) )
         gterm_list.extend( gdict.keys() )
     gterm_list.sort() #Remove it if it is too slow
+    idx_no = 0
     for i in range(len(gterm_list)):
         if not gterm_list[i] in gterm_index:
-            gterm_index[ gterm_list[i] ] = i
+            idx_no += 1
+            gterm_index[ gterm_list[i] ] = idx_no
     print("Global Term index len: %s" % len(gterm_index) ) 
     return gterm_index
 
@@ -195,9 +197,18 @@ def save_dct_lst(filename, records, index, filepath=None):
     return True           
 
 
+#Testing Tools
 if __name__ == "__main__":
     
-    pass
+    d1 = {'jim':1, 'fsdf':2, 'kol':3}
+    d2 = {'fasdfsd':1, 'fsdf':2, 'kol':3, 'jim': 4}
+    
+    print d1
+    print d2
+    
+    print merge_global_dicts(d1, d2)
+    
+
     
     
     

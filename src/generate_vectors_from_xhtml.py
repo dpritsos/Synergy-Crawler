@@ -14,7 +14,7 @@ def gen_vect(xhtml_d):
     return vgen.gen_vect(xhtml_d)
     
 ########################## CREAT DICTIONARIES #################################
-genres = ["product_companies"] #"news", "blogs", "forum", "academic", , "wiki_pages" 
+genres = ["news", "blogs", "forum", "academic", "wiki_pages", "product_companies"] # 
 base_filepath = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/"
 
 
@@ -39,14 +39,15 @@ for g in genres:
     for i, page in enumerate(page_file_l):
         xhtmlfiles_l.append( {"filename" : page, "filepath" : filepath} )  
     vect_ll = ppool.map(gen_vect, xhtmlfiles_l, 4)
-    for vect_l in vect_ll:
-        if vect_l[0] == None:
+    for j, vect_l in enumerate(vect_ll):
+        if vect_l == [None, None, None]:
             vect_ll.remove(vect_l)
     webpg_l = [ i for i, j, k in vect_ll] 
     webpg_vect_l = [ j for i, j, k in vect_ll]
     ngram_vect_l = [ k for i, j, k in vect_ll]
     global_term_dict = gterm_d_gen(webpg_vect_l)
-    global_ngram_dict = gterm_d_gen(ngram_vect_l)  
+    global_ngram_dict = gterm_d_gen(ngram_vect_l)
+    print j  
     print(len(webpg_l), len(webpg_vect_l), len(ngram_vect_l))
     #Save Term Frequency Dictionaries 
     filename = g  + ".corpd"   
@@ -65,3 +66,4 @@ for g in genres:
     ppool.close()
     ppool.join()
 
+print("Thank you and Goodbuy!")
