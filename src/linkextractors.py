@@ -6,6 +6,8 @@ from lxml.html.clean import Cleaner as html_clr
 import lxml.html.soupparser as soup
 from StringIO import StringIO
 
+import re
+
 #Import the custom thread-pool
 from threadpool import ThreadPool 
 
@@ -27,6 +29,8 @@ class LinkExtractor(object):
         self.__extract_site_urls = etree.XPath("/html/body//a/@href")
         self.__extract_media_urls = etree.XPath("//src")
         self.__extract_scripts_urls = etree.XPath("//src")
+        self._url_href = re.compile('<a href="(.+)">')
+        
         
     def __iter__(self):
         """Be careful when use the LinkExtractor as iterator"""
@@ -85,7 +89,8 @@ class LinkExtractor(object):
             links.append(link)
             
     def sites_links(self, xhtml):
-        return self.__extract_site_urls( self.__parseto_xtree(xhtml) )
+        return self._url_href.findall(xhtml['xhtml_s'])
+        #return self.__extract_site_urls( self.__parseto_xtree(xhtml) )
     
     def media_links(self, xhtml):
         return None #to be Fixed
@@ -126,7 +131,6 @@ class LinkExtractor(object):
     def sites_links_iter(self):
         self.__call_q = self.__site_links_q
         return self
-        #return iter( self, False)
     
     def media_links_iter(self):
         self.__call_q = self.__media_links_q

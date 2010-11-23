@@ -88,7 +88,7 @@ print("START")
 lower_case = True
 
 ##################### CREAT GLOBAL INDEX FOR BOTH CORPUSSES ##################
-genres = [ "news" , "product_companies", "forum", "blogs",  "academic", "wiki_pages"] 
+genres = [ "news" , "product_companies"] #, "forum", "blogs",  "academic", "wiki_pages"] 
 base_filepath = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/"
 corpus_d = "/corpus_dictionaries/"
 gterm_index = dict()
@@ -142,8 +142,6 @@ for g in genres:
 #global_vect_l = inv_tf(global_vect_l) 
 #########Normalised Frequency form
 #global_vect_l = tf2tfnorm(global_vect_l, div_by_max=True)
-
-
           
 ############################################### Train SVM ###############################################
 class_tags, svm_m = train_svm( vectl_genre['news'][0:3000] )

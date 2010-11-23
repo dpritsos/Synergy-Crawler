@@ -23,6 +23,7 @@ if __name__ == '__main__':
     user_agent = 'Mozilla/5.0 (X11; U; Linux 2.6.34.1-SquidSheep; en-US; rv:1.9.2.3) Gecko/20100402 Iceweasel/3.6.3 (like Firefox/3.6.3)'
     #user_agent = 'Mozilla/5.0 (Windows; U; Windows NT 6.1; fr; rv:1.9.2.10) Gecko/20100914 Firefox/3.6.10 InRed'
     
+    testpath = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/test/"
     
     #SEEDS FOR NEWS
     filepath1 = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/news/" 
@@ -337,9 +338,9 @@ if __name__ == '__main__':
     
     #Start the SCSpider restricted to scan the pages of one WebSite
     scspider_ps = list()
-    for Seed in Forum2:
+    for Seed in News2:
         #NOTICE: "kill_evt=m.Event()," for having different termination signal for each Spider since for this Strategy (2) they do not collaborate
-        scspider_ps.append( SCSpider(seed=Seed, base_url_drop_none=False, urls_number_stop=200, kill_evt=m.Event(), spider_spoof_id=user_agent, save_path=filepath6) )
+        scspider_ps.append( SCSpider(seed=Seed, base_url_drop_none=False, urls_number_stop=200, kill_evt=m.Event(), spider_spoof_id=user_agent, save_path=testpath) )
     for scspider_p in scspider_ps:    
         scspider_p.start()
     
