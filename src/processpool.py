@@ -3,14 +3,15 @@
     Author: Dimitrios Pritsos
     Last update: 12 / Nov / 2010"""
 
-from threading import Thread, Event 
+from threading import Thread, Event
+from multiprocessing import Process, Manager 
 import Queue
 
-class WorkerThread(Thread):
+class WorkerProcess(Process):
     """Worker Thread class"""
        
     def __init__(self, tasks_queue, joinall):
-        Thread.__init__(self)
+        Process.__init__(self)
         self.__tasks_queue = tasks_queue
         self.__joinall = joinall
         
@@ -18,6 +19,7 @@ class WorkerThread(Thread):
         #Run while no Join-all signal has sent
         while not self.__joinall.is_set():
             #Suspend until a new task pending to be execute
+            print "works"
             func, args, callback = (None, None, None)
             try: 
                 func, args, callback = self.__tasks_queue.get(timeout=10)
@@ -40,7 +42,8 @@ class ThreadPool(object):
     
     def __init__(self, threads_num):
         self.__threads_l = list()
-        self.__tasks_q = Queue.Queue() #Maybe this should be limited
+        self.m = Manager()
+        self.__tasks_q = self.m.Queue() #Maybe this should be limited
         self.__joinall = Event()     
         self.__start_pool(threads_num)
 
@@ -48,7 +51,7 @@ class ThreadPool(object):
         """Set the pool size and start all threads"""
         #Initialise the Threads
         for i in range(threads_num):
-            self.__threads_l.append( WorkerThread(self.__tasks_q, self.__joinall) )
+            self.__threads_l.append( WorkerProcess(self.__tasks_q, self.__joinall) )
         #Start the threads
         for t in self.__threads_l:
             t.start()
@@ -63,7 +66,7 @@ class ThreadPool(object):
         elif len(args) == 2:
             #If no callback-function is given return the result of the dispatched function to the dispatch caller
             #in that case this function waits until the results are available
-            return_l = list()
+            return_l = self.m.list()
             self.__tasks_q.put( (args[0], args[1], return_l.append) )
             while not return_l: #Maybe this should be become NON-BLOCKING
                 pass
@@ -126,9 +129,9 @@ if __name__ == "__main__":
     pool.dispatch(sorting, [5, 6, 7, 1, 3, 0, 1, 1, 10], callback_func)
     pool.dispatch(sorting, [5], callback_func)
     pool.dispatch(sorting, [0, 0, 1, 10], callback_func)
-    print("\npool.dispatch( sorting(), [ list ] ) returns: %s %s\n" % pool.dispatch(sorting, [5, 6, 7, 1, 3]) )   
-    print("pool.map() returns: %s \n\n" %  pool.map( sorting, iterable=([12, 1], [11, 1], [10, 1], [9, 1], [8, 1], [7, 1], [6, 1], [5, 1], [4, 1], [3, 1], [2, 1], [1, 1], [0, 1]) ) )
-    pool.map( sorting, callback=callback_func, iterable=([12, 1], [11, 1], [10, 1], [9, 1], [8, 1], [7, 1], [6, 1], [5, 1], [4, 1], [3, 1], [2, 1], [1, 1], [0, 1]) ) 
+    #print("\npool.dispatch( sorting(), [ list ] ) returns: %s %s\n" % pool.dispatch(sorting, [5, 6, 7, 1, 3]) )   
+    #print("pool.map() returns: %s \n\n" %  pool.map( sorting, iterable=([12, 1], [11, 1], [10, 1], [9, 1], [8, 1], [7, 1], [6, 1], [5, 1], [4, 1], [3, 1], [2, 1], [1, 1], [0, 1]) ) )
+    #pool.map( sorting, callback=callback_func, iterable=([12, 1], [11, 1], [10, 1], [9, 1], [8, 1], [7, 1], [6, 1], [5, 1], [4, 1], [3, 1], [2, 1], [1, 1], [0, 1]) ) 
        
     #Terminate all threads when there are no other task for execution 
     pool.join_all()

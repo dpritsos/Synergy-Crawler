@@ -52,7 +52,6 @@ if __name__ == '__main__':
              "http://www.pcmag.com",
              "http://www.informationweek.com",
              "http://www.technewsworld.com",
-             "http://news.softpedia.com",
              "http://www.space-travel.com",
              "http://www.upi.com",
              "http://news.cnet.com",
@@ -272,9 +271,9 @@ if __name__ == '__main__':
                "http://www.uwec.edu" ]
     
     filepath5 = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/wiki_pages/"
-    WikiPages = ["http://en.wikipedia.org/wiki/Main_Page"]
-                 #"http://www.njc.edu.sg",
-                 #"http://wiki.mobileread.com/wiki/Main_Page"]
+    WikiPages = ["http://en.wikipedia.org/wiki/Main_Page",
+                 "http://www.njc.edu.sg",
+                 "http://wiki.mobileread.com/wiki/Main_Page"]
                 
     filepath6 = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/forum/"
     Forum1 = ["http://www.sbrforum.com",
@@ -324,6 +323,12 @@ if __name__ == '__main__':
               "http://www.autocareforum.com",
               "http://www.apteraforum.com",
               "http://www.chinacarforums.com" ]
+    #(News1,filepath1, 200), (News2, filepath1, 200), (News3, filepath1, 200), (Blogs1, filepath2, 200), (Blogs2, filepath2, 200),  
+    AllGenres = [ (Blogs3, filepath2, 200),
+                  (Product_comp1, filepath3, 170), (Product_comp2, filepath3, 170), (Product_comp3, filepath3, 170), (Product_comp4, filepath3, 170),
+                  (Academ1,filepath4, 200), (Academ2, filepath4, 200), (Academ3, filepath4, 200),
+                  (Forum1, filepath6, 210), (Forum2, filepath6, 210), (Forum3, filepath6, 210),
+                  (WikiPages, filepath5, 3500) ]
     
     #Manger process for InterProcess Event() and Simple Queue()
     m = Manager()
@@ -336,37 +341,37 @@ if __name__ == '__main__':
     #Define a variable that will use get the primitive analysis output of the SCSpider(s)   
     vects_q = Queue()  
     
-    #Start the SCSpider restricted to scan the pages of one WebSite
-    scspider_ps = list()
-    for Seed in News2:
-        #NOTICE: "kill_evt=m.Event()," for having different termination signal for each Spider since for this Strategy (2) they do not collaborate
-        scspider_ps.append( SCSpider(seed=Seed, base_url_drop_none=False, urls_number_stop=200, kill_evt=m.Event(), spider_spoof_id=user_agent, save_path=testpath) )
-    for scspider_p in scspider_ps:    
-        scspider_p.start()
+    for Genre, filepath, sites_no in AllGenres:
+        #Start the SCSpider restricted to scan the pages of one WebSite
+        scspider_ps = list()
+        for Seed in Genre:
+            #NOTICE: "kill_evt=m.Event()," for having different termination signal for each Spider since for this Strategy (2) they do not collaborate
+            scspider_ps.append( SCSpider(seed=str(Seed), base_url_drop_none=False, urls_number_stop=sites_no, kill_evt=m.Event(), spider_spoof_id=user_agent, save_path=str(filepath) ) )
+        for scspider_p in scspider_ps:    
+            scspider_p.start()
     
-    terminate = False #Temporarily Here !!!
-    while True:
-        if terminate:
-            killall_evt.set()
-            break
-        for scspider in scspider_ps:
-            if not scspider.is_alive():
-                scspider.join()
-                line = "SPIDER %d : DEAD - JOIN\n" % (scspider_ps.index(scspider) + 1)
-                scspider_ps.remove(scspider)
-                print(line)
-  
-        if len(scspider_ps) ==  0:
-            terminate = True
+        terminate = False #Temporarily Here !!!
+        while True:
+            if terminate:
+                killall_evt.set()
+                break
+            for scspider in scspider_ps:
+                if not scspider.is_alive():
+                    scspider.join()
+                    line = "SPIDER %d : DEAD - JOIN\n" % (scspider_ps.index(scspider) + 1)
+                    scspider_ps.remove(scspider)
+                    print(line)
+            if len(scspider_ps) ==  0:
+                terminate = True
             
-    #Try to end properly this Process and its SubProcesses
-    for scspider in scspider_ps:
-        if scspider.is_alive():
-            scspider.join(5)
-    #In case some Process is still alive Just Kill them all
-    for scspider in scspider_ps:
-        if scspider.is_alive():
-            scspider.terminate()
+        #Try to end properly this Process and its SubProcesses
+        for scspider in scspider_ps:
+            if scspider.is_alive():
+                scspider.join(1)
+        #In case some Process is still alive Just Kill them all
+        for scspider in scspider_ps:
+            if scspider.is_alive():
+                scspider.terminate()
         
     print("Thank you and Goodbye!")     
     

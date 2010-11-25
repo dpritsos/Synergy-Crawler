@@ -10,7 +10,6 @@ from eventlet.green import urllib2 #For GreenThreading not I don't know how it i
 from eventlet.green import os
 import stat
 from urlparse import urlparse 
-import hashlib
 
 from Queue import Queue
 
@@ -18,7 +17,7 @@ from BeautifulSoup import UnicodeDammit
 
 #Load custom modules containing the Unit variants that the SCSpider consist of
 from dueunits import DUEUnit
-from linkextractors import LinkExtractor
+from linkextractors import LinkExtractorTPool
 
 import time
 
@@ -52,7 +51,7 @@ class SCSpider(Process):
         else:
             self.scqs = list() 
         self.due = DUEUnit()
-        self.link_extro = LinkExtractor(feed=False)
+        self.link_extro = LinkExtractorTPool(feed=False)
         #The self.headers keeps the HTTP headers Agent information for Masking the Crawler
         self.headers = { 'User-Agent' : kwargs.pop("spider_spoof_id", None) }
         if self.headers['User-Agent'] == None: 
@@ -77,14 +76,15 @@ class SCSpider(Process):
         url = self.urls_l[0]       
         self.due.setBase(url)
         #Define a process 
-        gpool = eventlet.GreenPool(100)
-        #ppool = multiprocessing.Pool(10)
+        #n_gpool = eventlet.GreenPool(2)
+        s_gpool = eventlet.GreenPool(1000)
+        ppool = multiprocessing.Pool(2)
         #green_save_p = eventlet.GreenPool(1000)
         #A thread is constantly checking the DUE seen dictionary is big enough to be saved on disk
         disk_keeper_thrd = Thread(target=self.savedue)
         disk_keeper_thrd.start()
         #From this line and below the loop this Process is starting 
-        scanned_urls = 0 #Counter for the URLS that have been Followed by the Crawler - SHOULD BE HERE
+        scanned_urls = 1 #Counter for the URLS that have been Followed by the Crawler - SHOULD BE HERE
         while True:
             #Termination Condition of this spider: They can be external signal(s), user defined conditions or when spider didn't finds any URLs related to the Crawling target
             #Terminate - External Signal or Functional problems occur while crawling
@@ -106,8 +106,8 @@ class SCSpider(Process):
                     self.urls_l.append(ext_url)
             tmp_urls_l = list() #SHOULD BE HERE
             #Start Processing WebPages (in fact sockets to them) which a Pool of GreenThreads is harvesting Asynchronously  
-            for xhtml in gpool.imap(self.fetchsrc, self.urls_l):
-            #for xhtml in ppool.imap_unordered(fetchsrc, self.urls_l, 10):
+            #for xhtml in n_gpool.imap(self.fetchsrc, self.urls_l):
+            for xhtml in ppool.imap_unordered(fetchsrc, self.urls_l, 2):
                 #Feed the link Extractor with the new-coming XHTML(s) if not empty
                 if xhtml[0]:
                     #Expand the xhtml tree dictionary with some date for later process
@@ -118,13 +118,8 @@ class SCSpider(Process):
                     xhtml_d['url_resp'] = xhtml[3]
                     prsd_url = urlparse(xhtml[2])
                     xhtml_d['netloc'] = prsd_url.netloc
-                    xhtml_d['base_url'] = str(prsd_url.scheme + "://" + prsd_url.netloc)
-                    #print xhtml_d['base_url']
-                    #print xhtml_d
-                    #count += 1
-                    #print count
-                    #Save fetched xhtml 
-                    self.save_xhtml(xhtml_d)
+                    xhtml_d['base_url'] = str(prsd_url.scheme + "://" + prsd_url.netloc) 
+                    s_gpool.spawn_n(self.save_xhtml, xhtml_d)
                     #Terminate - Some User condition reached
                     if scanned_urls >= self.urls_number:
                         print("SCSpider Process (PID = %s - PCN = %s): Terminated - User Condition: Stop On %d Pages (%d have been followed) "\
@@ -220,7 +215,6 @@ class SCSpider(Process):
         try:
             try:
                 file = self.save_path + str(xhtml_d['netloc']) + "." + str(self.file_counter) + ".html"
-                print file
                 f = os.open( file, os.O_CREAT | os.O_WRONLY, stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH | stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
             except Exception as e:
                 #Stop the Process First and then raise the Exception with some extra info
