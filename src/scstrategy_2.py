@@ -323,12 +323,11 @@ if __name__ == '__main__':
               "http://www.autocareforum.com",
               "http://www.apteraforum.com",
               "http://www.chinacarforums.com" ]
-    #(News1,filepath1, 200), (News2, filepath1, 200), (News3, filepath1, 200), (Blogs1, filepath2, 200), (Blogs2, filepath2, 200),  
-    AllGenres = [ (Blogs3, filepath2, 200),
-                  (Product_comp1, filepath3, 170), (Product_comp2, filepath3, 170), (Product_comp3, filepath3, 170), (Product_comp4, filepath3, 170),
-                  (Academ1,filepath4, 200), (Academ2, filepath4, 200), (Academ3, filepath4, 200),
-                  (Forum1, filepath6, 210), (Forum2, filepath6, 210), (Forum3, filepath6, 210),
-                  (WikiPages, filepath5, 3500) ]
+    #(News1,filepath1, 200), (News2, filepath1, 200), (News3, filepath1, 200), 
+    #(Product_comp1, filepath3, 170), (Product_comp2, filepath3, 170), (Product_comp3, filepath3, 170), (Product_comp4, filepath3, 170),
+    #(Academ1,filepath4, 250), (Academ2, filepath4, 250), (Academ3, filepath4, 250), (Forum1, filepath6, 250), (Forum2, filepath6, 250), (Forum3, filepath6, 250),
+    #(WikiPages, filepath5, 3500), (Blogs1, filepath2, 250), (Blogs2, filepath2, 250), (Blogs3, filepath2, 250)     
+    AllGenres = [ (News1,filepath1, 250) ]
     
     #Manger process for InterProcess Event() and Simple Queue()
     m = Manager()

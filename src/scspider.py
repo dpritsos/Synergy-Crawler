@@ -76,9 +76,9 @@ class SCSpider(Process):
         url = self.urls_l[0]       
         self.due.setBase(url)
         #Define a process 
-        #n_gpool = eventlet.GreenPool(2)
-        s_gpool = eventlet.GreenPool(1000)
-        ppool = multiprocessing.Pool(2)
+        n_gpool = eventlet.GreenPool(1)
+        s_gpool = eventlet.GreenPool(10000)
+        #ppool = multiprocessing.Pool(2)
         #green_save_p = eventlet.GreenPool(1000)
         #A thread is constantly checking the DUE seen dictionary is big enough to be saved on disk
         disk_keeper_thrd = Thread(target=self.savedue)
@@ -106,8 +106,8 @@ class SCSpider(Process):
                     self.urls_l.append(ext_url)
             tmp_urls_l = list() #SHOULD BE HERE
             #Start Processing WebPages (in fact sockets to them) which a Pool of GreenThreads is harvesting Asynchronously  
-            #for xhtml in n_gpool.imap(self.fetchsrc, self.urls_l):
-            for xhtml in ppool.imap_unordered(fetchsrc, self.urls_l, 2):
+            for xhtml in n_gpool.imap(self.fetchsrc, self.urls_l):
+            #for xhtml in ppool.imap_unordered(fetchsrc, self.urls_l, 2):
                 #Feed the link Extractor with the new-coming XHTML(s) if not empty
                 if xhtml[0]:
                     #Expand the xhtml tree dictionary with some date for later process
@@ -192,6 +192,7 @@ class SCSpider(Process):
         return socket
     
     def fetchsrc(self, url_req):
+        time.sleep(2)
         htmlsrc = None
         socket = None
         charset = None
@@ -245,7 +246,7 @@ class SCSpider(Process):
     def savedue(self):
         while not self.kill_evt.is_set():
             self.due.acquire()
-            while self.due.seen_len() < 1000:
+            while self.due.seen_len() < 100000000:
                 #This will force the thread to stop in case a global stop signal is given
                 if self.kill_evt.is_set():
                     return

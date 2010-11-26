@@ -145,7 +145,10 @@ class LinkExtractor(object):
         #Set self.base_url and choose the proper function to be used
         self.set_base(base_url)
         #iterable argument should ONLY be used when class instance is used as interator
-        self.__iter = iterable.__iter__()  
+        if iterable:
+            self.__iter = iterable.__iter__()  
+        else:
+            self.__iter = None
         #Regular expression objects for extracting the URL/Link Types
         self.__url_a_href = re.compile('<a href="([^"]+)"')
         
@@ -197,10 +200,10 @@ class LinkExtractor(object):
     def __media_links_base(self, xhtml):
         return None #to be Fixed
     
-    def __scripts_links(self, xhtml):
+    def __script_links(self, xhtml):
         return None #to be Fixed
     
-    def __scripts_links_base(self, xhtml):
+    def __script_links_base(self, xhtml):
         return None #to be Fixed
     
     def __undefined_links(self, xhtml):
@@ -421,10 +424,10 @@ class LinkExtractorPPool(LinkExtractor):
     def url_imap(self, xhtml_list):
         return self.__ppool.imap(self.site_links, xhtml_list, self.__pl_size)
     
-    def url_imap(self, xhtml_list):
+    def url_iap(self, xhtml_list):
         return self.__ppool.imap(self.site_links, xhtml_list, self.__pl_size)
     
-    def url_imap(self, xhtml_list):
+    def url_map(self, xhtml_list):
         return self.__ppool.imap(self.site_links, xhtml_list, self.__pl_size)
         
     def close(self):
