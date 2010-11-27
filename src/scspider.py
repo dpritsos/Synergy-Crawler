@@ -192,7 +192,7 @@ class SCSpider(Process):
         return socket
     
     def fetchsrc(self, url_req):
-        time.sleep(2)
+        #time.sleep(5)
         htmlsrc = None
         socket = None
         charset = None

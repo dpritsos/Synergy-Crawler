@@ -293,6 +293,8 @@ class LinkExtractorTPool(object):
     def sites_links(self, xhtml): 
         url_l = self._url_href.findall(xhtml['xhtml_s'])
         for i, url in enumerate(url_l):
+            if url.find('#') > -1:
+                url = ""
             prsd_url = urlparse(url)
             if not prsd_url.netloc:
                 url_l[i] = xhtml['base_url'] + url
