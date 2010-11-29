@@ -3,7 +3,7 @@ from multiprocessing import Pool
 import copy_reg
 import types
 
-
+"""
 def _pickle_method(method):
     func_name = method.im_func.__name__
     obj = method.im_self
@@ -19,9 +19,9 @@ def _unpickle_method(func_name, obj, cls):
         else:
             break
     return func.__get__(obj, cls)
+"""
 
-
-copy_reg.pickle(types.MethodType, _pickle_method, _unpickle_method)
+#copy_reg.pickle(types.MethodType, _pickle_method, _unpickle_method)
 
 
 class test(object):
@@ -34,7 +34,11 @@ class test(object):
     def count1(self, num):
         print num
             
+    def pclose(self):
+        self.p.close()
+        self.p.join()
 
 c = test()
 
-c.feed()        
+c.feed()  
+c.pclose()

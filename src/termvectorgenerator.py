@@ -204,6 +204,7 @@ class VectGen(object):
         #Append the URL of the xtree to the list of Web Pages that the TF (or other) vector has been Generated 
         #self.webpg_l.append( xhtml_d['filename'] )
         print "etree : Filters Done!"
+        del xhtml_t
         return [ xhtml_d['filename'], xhtml_TF, xhtml_NgF ] 
         #Append the Term Vector of the xtree to the list of Web Pages' Vectors
         #self.webpg_vect_l.append(xhtml_TF)

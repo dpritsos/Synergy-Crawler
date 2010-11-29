@@ -108,7 +108,7 @@ def merge_to_global_dict(filelist, filepath=None, force_lower_case=False):
                 global_vect[d_trm] = vect_d[d_trm]
     return global_vect
     
-def load_dict_l(filepath, filename, g_terms_d=None, force_lower_case=False):
+def load_dict_l(filepath, filename, g_terms_d=None, force_lower_case=False, page_num=0):
     try:
         f = codecs.open( filepath + str(filename), "r")
     except IOError, e:
@@ -143,10 +143,14 @@ def load_dict_l(filepath, filename, g_terms_d=None, force_lower_case=False):
                         #if you cannot find the term in the global dictionary just drop the term
                         print("Term \" %s \"not found in the Global Dictionary/Index - Dropped!" % decomp_term[0])
             vect_l.append( vect_dict )
+            #If a limited number of HTML page vector is needed then stop loading when this number is reached 
+            if len(vect_l) == page_num:
+                break
     except:
         f.close()
         return None
-    f.close()
+    finally:
+        f.close()
     #Return tuple of WebPages Vectors and     
     return (wps_l, vect_l)
 
@@ -192,7 +196,6 @@ def save_dct_lst(filename, records, index, filepath=None):
             f.write("\n") 
     except:
         print("ERROR WRITTING FILE: %s" % filename)
-        f.close()
         f.close()
     return True           
 
