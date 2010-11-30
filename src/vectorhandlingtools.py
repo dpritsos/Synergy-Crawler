@@ -7,39 +7,6 @@ import codecs
 from multiprocessing import Process
 #from scgenrelerner_svmbased import *
 
-################################################ MULTI-PROCESSING INDEXING #########################################################    
-def make_libsvm_sparse_vect(self, webpg_vect_l):
-    #set_terms.sort()
-    new_webpg_vect_l = list()
-    chunck_wp_l =list()
-    webpg_vect_l_size = len(webpg_vect_l)
-    chnk_size = webpg_vect_l_size/12
-    chnk_remain = webpg_vect_l_size%12
-    pre_i = 0
-    for i in range(chnk_size, webpg_vect_l_size, chnk_size):
-        chunck_wp_l.append( webpg_vect_l[ pre_i : i ] )
-        pre_i = i
-    if chnk_remain != 0 :
-        chunck_wp_l[11].extend( webpg_vect_l[ len(chunck_wp_l) : (len(chunck_wp_l) + chnk_remain) ] ) 
-    print("Chuncking Done!")
-    labeling_ps = list()
-    for i in xrange(len(chunck_wp_l)):  
-    ##    labeling_ps.append( Process(target=label_properly, args=(chunck_wp_l[i],vect_l_chnk)) ) 
-        pass
-    for lbl_p in labeling_ps:
-        lbl_p.start()
-    print("Starting Done!")
-    for i in xrange(len(chunck_wp_l)):
-        new_webpg_vect_l.extend(vect_l_chnk.get())
-    print("concatenation Done!")
-    for lbl_pp in labeling_ps:
-        lbl_pp.join()
-        print("Process End")
-    print("Processing Done!")
-    print("make_libsvm_sparse_vect: Second Part Done")
-    return (new_webpg_vect_l)
-################################################
-
 def merge_global_dicts(*gdicts):
     gterm_index = dict()
     gterm_list = list()
@@ -51,7 +18,7 @@ def merge_global_dicts(*gdicts):
     for i in range(len(gterm_list)):
         if not gterm_list[i] in gterm_index:
             idx_no += 1
-            gterm_index[ gterm_list[i] ] = idx_no
+            gterm_index[ gterm_list[i] ] = [ idx_no, gdict[ gterm_list[i] ] ]  
     print("Global Term index len: %s" % len(gterm_index) ) 
     return gterm_index
 
@@ -93,8 +60,7 @@ def load_dict(filepath, filename, force_lower_case=False):
     return vect_dict  
 
 def merge_to_global_dict(filelist, filepath=None, force_lower_case=False):
-    if not isinstance(filelist, (list, tuple)) :
-        return False
+    assert isinstance(filelist, (list, tuple))
     gpool = eventlet.GreenPool(10)
     filepaths= map( lambda x: filepath, range(len(filelist)) )
     force_lower= map( lambda x: force_lower_case, range(len(filelist)) )
@@ -129,23 +95,27 @@ def load_dict_l(filepath, filename, g_terms_d=None, force_lower_case=False, page
                 decomp_term = comp_term.split(' : ')
                 if g_terms_d == None:
                     if force_lower_case:
-                        vect_dict[ decomp_term[0].lower() ] = decomp_term[1]
+                        vect_dict[ decomp_term[0].lower() ][1] = decomp_term[1]
                     else:    
-                        vect_dict[ decomp_term[0] ] = decomp_term[1]
+                        vect_dict[ decomp_term[0] ][1] = decomp_term[1]
                 elif isinstance(g_terms_d, dict):
                     #if Globals Term list has been given then find the proper index value for creating the numerically tagged dictionary
                     try:
                         if force_lower_case:
-                            vect_dict[ g_terms_d[ decomp_term[0].lower() ] ] = float( decomp_term[1] )
+                            vect_dict[ g_terms_d[ decomp_term[0].lower() ][1] ] = float( decomp_term[1] )
                         else:
-                            vect_dict[ g_terms_d[ decomp_term[0] ] ] = float( decomp_term[1] )
+                            vect_dict[ g_terms_d[ decomp_term[0] ][1] ] = float( decomp_term[1] )
                     except:
                         #if you cannot find the term in the global dictionary just drop the term
-                        print("Term \" %s \"not found in the Global Dictionary/Index - Dropped!" % decomp_term[0])
+                        #print("Term \" %s \"not found in the Global Dictionary/Index - Dropped!" % decomp_term[0])
+                        pass
             vect_l.append( vect_dict )
-            #If a limited number of HTML page vector is needed then stop loading when this number is reached 
-            if len(vect_l) == page_num:
+            #If a limited number of HTML page vector is needed then stop loading when this number is reached
+            vect_l_len = len(vect_l) 
+            if vect_l_len == page_num:
                 break
+            if vect_l_len == 0:
+                print("Page Vector has Zero terms common to the Training-Genre-Dictionary!!!")
     except:
         f.close()
         return None

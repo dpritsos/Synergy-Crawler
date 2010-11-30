@@ -355,6 +355,31 @@ class LinkExtractorTPool(object):
     def close(self):
         self.__tpool.join_all()
 
+##### This is a "Hack" for enabling multiprocessing.Pool to execute class method functions #####
+#### I prefer to make an implementation bound the Pickling hack only for LinkExtractorPPool####
+
+import types
+import copy_reg
+
+def _pickle_method(method):
+    func_name = method.im_func.__name__
+    #obj = method.im_self #Use this only for Classes not including multiprocessing.Pool definition
+    cls = method.im_class
+    return _unpickle_method, (func_name, cls)
+
+def _unpickle_method(func_name, cls):
+    for cls in cls.mro():
+        try:
+            func = cls.__dict__[func_name]
+        except KeyError:
+            pass
+        else:
+            break
+    return func.__get__(cls)
+
+copy_reg.pickle(types.MethodType, _pickle_method, _unpickle_method)
+
+############################################################################################
 
 class LinkExtractorPPool(LinkExtractor):
     

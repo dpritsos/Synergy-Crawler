@@ -114,31 +114,27 @@ def inv_tf(global_vect_l):
             line[key] = (1/line[key])
     return global_vect_l
 
-def tf2bin(global_vect_l, tf_threshold=0):
-    for line in global_vect_l:
-        dkeys = line.keys()
-        #print line
-        for key in dkeys:
-            if line[key] > tf_threshold:
-                line[key] = 1
-            else:
-                line[key] = 0
-        #print line
-        #0/0
-    print global_vect_l[1]
-    return global_vect_l
-
-def inv_tf2bin(global_vect_l, tf_threshold=0):
+def tf2bin(global_vect_l, gterm_d,tf_threshold=0):
     for line in global_vect_l:
         dkeys = line.keys()
         for key in dkeys:
-            if line[key] < tf_threshold:
+            if gterm_d[ key ][2] > tf_threshold:
                 line[key] = 1
             else:
                 line[key] = 0
     return global_vect_l
 
-def glob_vect_l(genres, pg_num=None, wpsl_genre={}, vectl_genre={}):
+def tf2hapax(global_vect_l, gterm_d,tf_threshold=2):
+    for line in global_vect_l:
+        dkeys = line.keys()
+        for key in dkeys:
+            if gterm_d[ key ][2] < tf_threshold:
+                line[key] = 1
+            else:
+                line[key] = 0
+    return global_vect_l
+
+def glob_vect_l(genres, gterm_index, lower_case, pg_num=None, wpsl_genre={}, vectl_genre={}):
     vectors_d = "/corpus_webpage_vectors/"
     base_filepath = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/"
     if pg_num == None:
@@ -166,20 +162,20 @@ print("START")
 
 lower_case = True
 
-##################### CREAT GLOBAL INDEX FOR BOTH CORPUSSES ##################
 genres = [ "news" , "product_companies", "forum", "blogs", "wiki_pages"] # "academic", 
 base_filepath = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/"
 corpus_d = "/corpus_dictionaries/"
-gterm_index = dict()
-for g in genres:
-    filepath = base_filepath + g + corpus_d
-    cdicts_flist = [files for path, dirs, files in os.walk(filepath)]
-    cdicts_flist = cdicts_flist[0]
-    corpus_dict = merge_to_global_dict(cdicts_flist, filepath, force_lower_case=lower_case)
-    print("%s Dictionary has been loaded" % g )
-    gterm_index = merge_global_dicts(gterm_index, corpus_dict)
-    print("%s merged to Global Term Index" % g)
-print( "Global Index Size: %s\n" % len(gterm_index))
+##################### CREAT GLOBAL INDEX FOR BOTH CORPUSSES ####################
+#gterm_index = dict()
+#for g in genres:
+#    filepath = base_filepath + g + corpus_d
+#    cdicts_flist = [files for path, dirs, files in os.walk(filepath)]
+#    cdicts_flist = cdicts_flist[0]
+#    corpus_dict = merge_to_global_dict(cdicts_flist, filepath, force_lower_case=lower_case)
+#    print("%s Dictionary has been loaded" % g )
+#    gterm_index = merge_global_dicts(gterm_index, corpus_dict)
+#    print("%s merged to Global Term Index" % g)
+#print( "Global Index Size: %s\n" % len(gterm_index))
 #gterm_index = merge_global_dicts(corpus_dict, corpus_dict2) #, corpus_dict3, corpus_dict4)
 
 genres = [ "news" , "product_companies", "forum", "blogs", "wiki_pages"] 
@@ -187,31 +183,38 @@ base_filepath = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/"
 for g in genres:
     fobj = open( base_filepath + g + "_vs_all.eval", "w" )
     fobj.write("---- for Genre= " + g + " ----\n")
+    #################### LOAD THE PROPER GLOBAL INDEX ##############################
+    filepath = base_filepath + g + corpus_d
+    cdicts_flist = [files for path, dirs, files in os.walk(filepath)]
+    cdicts_flist = cdicts_flist[0]
+    corpus_dict = merge_to_global_dict(cdicts_flist, filepath, force_lower_case=lower_case)
+    gterm_index = merge_global_dicts(corpus_dict) 
+    print("%s Dictionary has been loaded" % g )
+    print( "Global Index Size: %s\n" % len(gterm_index))
     #################### CREAT GLOBAL LIST OF WEBPAGE VECTORS OF ALL GENRES################
     wpsl_genre = dict() 
     vectl_genre = dict()
-    glob_vect_l( [ g ] , None, wpsl_genre, vectl_genre)
+    glob_vect_l( [ g ] , gterm_index, lower_case, None, wpsl_genre, vectl_genre)
     rest_genres = list()
     for rst_g in genres:
         if rst_g != g:
             rest_genres.append(rst_g)
-    glob_vect_l( rest_genres, 1000, wpsl_genre, vectl_genre)
-    print len(wpsl_genre), len(vectl_genre)
+    glob_vect_l( rest_genres, gterm_index, lower_case, 1000, wpsl_genre, vectl_genre)
     for i in [1,2,3]:
         ######
-        TFREQ = 5
+        TFREQ = 3
         lower_case = True
         #########Keep TF above Threshold
         #global_vect_l = tf_abv_thrld(global_vect_l, tf_threshold=TFREQ)
         #########Binary from
         if i == 1:
-            fobj.write("**** Inverse Binary ****\n")
+            fobj.write("**** Inverse Binary - Hapax Legomenon ****\n")
             for grn in genres:
-                vectl_genre[ grn ] = inv_tf2bin(vectl_genre[ grn ], tf_threshold=TFREQ)
+                vectl_genre[ grn ] = tf2hapax(vectl_genre[ grn ], gterm_index,tf_threshold=TFREQ)
         elif i == 2:
             fobj.write("**** Binary ****\n")
             for grn in genres:
-                vectl_genre[ grn ] = tf2bin(vectl_genre[ grn ], tf_threshold=TFREQ)
+                vectl_genre[ grn ] = tf2bin(vectl_genre[ grn ], gterm_index,tf_threshold=TFREQ)
         elif i == 3:
             fobj.write("**** Normilised by Max Term ****\n")
             for grn in genres:
@@ -219,19 +222,20 @@ for g in genres:
         elif i == 4:
             fobj.write("**** Normilised by Total Sum ****\n")
             for grn in genres:
-                vectl_genre[ grn ] = tf2tfnorm(vectl_genre[ grn ], div_by_max=False)             
+                vectl_genre[ grn ] = tf2tfnorm(vectl_genre[ grn ], div_by_max=False)            
         #########Invert TF
         #global_vect_l = inv_tf(global_vect_l) 
         #########Normalised Frequency form
         for nu in [0.2, 0.3, 0.5, 0.7, 0.8]: # 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
             ############################################## Train SVM ###############################################
             fobj.write("++++ for nu= " + str(nu) + " ++++\n")
-            print "Training"
-            class_tags, svm_m = train_svm(fobj, vectl_genre[ g ][1000:], nu )
-            #print("Labels %s" % svm_m.get_labels()) Not working for one-class SVM
-            ############################################### Evaluate SVM ##############################################
-            #fobj.write("---- for Genre= " + g + " ----\n")
-            evaluate_svm(fobj, svm_m, vectl_genre, g, genres)
+            for size in range(1500,9000,500):
+                print "Training"
+                class_tags, svm_m = train_svm(fobj, vectl_genre[ g ][1000:size], nu )
+                #print("Labels %s" % svm_m.get_labels()) Not working for one-class SVM
+                ############################################### Evaluate SVM ##############################################
+                #fobj.write("---- for Genre= " + g + " ----\n")
+                evaluate_svm(fobj, svm_m, vectl_genre, g, genres)
     fobj.close()
 
 
