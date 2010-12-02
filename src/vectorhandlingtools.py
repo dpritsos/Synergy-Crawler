@@ -7,24 +7,9 @@ import codecs
 from multiprocessing import Process
 #from scgenrelerner_svmbased import *
 
-def merge_global_dicts(*gdicts):
-    gterm_index = dict()
-    gterm_list = list()
-    for gdict in gdicts:
-        print("Corpus index len: %s" % len(gdict.keys()) )
-        gterm_list.extend( gdict.keys() )
-    gterm_list.sort() #Remove it if it is too slow
-    idx_no = 0
-    for i in range(len(gterm_list)):
-        if not gterm_list[i] in gterm_index:
-            idx_no += 1
-            gterm_index[ gterm_list[i] ] = [ idx_no, gdict[ gterm_list[i] ] ]  
-    print("Global Term index len: %s" % len(gterm_index) ) 
-    return gterm_index
-
-def gterm_d_gen(webpg_vect_l):
+def common_trms(webpg_vect_l):
     set_vect = dict()
-    #Creat the Global Term Vector of Frequencies
+    #Create the Global Term Vector of Frequencies
     for pg_vect in webpg_vect_l:
         pg_trm_l = pg_vect.keys()
         for pg_trm in pg_trm_l:
@@ -35,8 +20,32 @@ def gterm_d_gen(webpg_vect_l):
     #set_terms = set_vect.keys()
     print("Global Terms Dictionary: Ready!")
     return set_vect
+
+def gterm_d_gen(webpg_vect_l): #for Backward compatibility
+    return common_trms(webpg_vect_l)
+
+
+
+#### Function for loading/handling dictionaries and dictionary lists from files ####
+
+def get_indexs(*gdicts): #Old Name: merge_global_dicts()
+    term_idx = dict()
+    freq_idx = dict()
+    gterm_list = list()
+    for gdict in gdicts:
+        print("Corpus index len: %s" % len(gdict.keys()) )
+        gterm_list.extend( gdict.keys() )
+    gterm_list.sort() #Remove it if it is too slow
+    idx_no = 0
+    for i in range(len(gterm_list)):
+        if not gterm_list[i] in term_idx:
+            idx_no += 1
+            term_idx[ gterm_list[i] ] = idx_no  
+            freq_idx[ idx_no ] = gdict[ gterm_list[i] ]
+    print("Global Term index len: %s" % len(term_idx) ) 
+    return (term_idx, freq_idx)
     
-def load_dict(filepath, filename, force_lower_case=False):
+def load_dct(filepath, filename, force_lower_case=False):
     try:
         f = codecs.open( filepath + str(filename), "r")
     except IOError, e:
@@ -53,20 +62,20 @@ def load_dict(filepath, filename, force_lower_case=False):
             else:
                 vect_dict[ line[0] ] = float( line[1] )
     except:
-        f.close()
         return None
-    f.close()
+    finally:
+        f.close()
     #Return the TF Vector    
     return vect_dict  
 
-def merge_to_global_dict(filelist, filepath=None, force_lower_case=False):
+def load_n_merge_dcts(filelist, filepath=None, force_lower_case=False): #merge_to_global_dict() RENAMED
     assert isinstance(filelist, (list, tuple))
     gpool = eventlet.GreenPool(10)
     filepaths= map( lambda x: filepath, range(len(filelist)) )
     force_lower= map( lambda x: force_lower_case, range(len(filelist)) )
     #Start Merging the Dictionaries - or Vector of Term Frequencies
-    global_vect = load_dict(filepath, filelist[0], force_lower_case)
-    for vect_d in gpool.imap(load_dict, filepaths, filelist[1:], force_lower):
+    global_vect = load_dct(filepath, filelist[0], force_lower_case)
+    for vect_d in gpool.imap(load_dct, filepaths, filelist[1:], force_lower):
         for d_trm in vect_d:
             if d_trm in global_vect: 
                 global_vect[d_trm] += vect_d[d_trm] 
@@ -95,16 +104,16 @@ def load_dict_l(filepath, filename, g_terms_d=None, force_lower_case=False, page
                 decomp_term = comp_term.split(' : ')
                 if g_terms_d == None:
                     if force_lower_case:
-                        vect_dict[ decomp_term[0].lower() ][1] = decomp_term[1]
+                        vect_dict[ decomp_term[0].lower() ] = decomp_term[1]
                     else:    
-                        vect_dict[ decomp_term[0] ][1] = decomp_term[1]
+                        vect_dict[ decomp_term[0] ] = decomp_term[1]
                 elif isinstance(g_terms_d, dict):
                     #if Globals Term list has been given then find the proper index value for creating the numerically tagged dictionary
                     try:
                         if force_lower_case:
-                            vect_dict[ g_terms_d[ decomp_term[0].lower() ][1] ] = float( decomp_term[1] )
+                            vect_dict[ g_terms_d[ decomp_term[0].lower() ] ] = float( decomp_term[1] )
                         else:
-                            vect_dict[ g_terms_d[ decomp_term[0] ][1] ] = float( decomp_term[1] )
+                            vect_dict[ g_terms_d[ decomp_term[0] ] ] = float( decomp_term[1] )
                     except:
                         #if you cannot find the term in the global dictionary just drop the term
                         #print("Term \" %s \"not found in the Global Dictionary/Index - Dropped!" % decomp_term[0])
@@ -117,7 +126,6 @@ def load_dict_l(filepath, filename, g_terms_d=None, force_lower_case=False, page
             if vect_l_len == 0:
                 print("Page Vector has Zero terms common to the Training-Genre-Dictionary!!!")
     except:
-        f.close()
         return None
     finally:
         f.close()
@@ -135,6 +143,10 @@ def label_numerically(webpg_vect_l, Gset_terms):
             libsvm_pg_vect[ Gset_terms[pg_term] ] = pg_vect[pg_term]
         new_webpg_vect_l.append( libsvm_pg_vect )
     return new_webpg_vect_l
+
+
+
+#### Functions for saving dictionary and list of dictionaries to file ####
 
 def save_dct(filename, records, filepath=None):
     """save_dct():"""

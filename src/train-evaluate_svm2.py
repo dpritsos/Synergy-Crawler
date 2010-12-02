@@ -103,8 +103,12 @@ def tf2tfnorm(global_vect_l, div_by_max=False):
             sum = float( 0 )
             for key in dkeys:
                 sum += line[key]
-            for key in dkeys:
-                line[key] = line[key]/sum
+            if sum > 0:
+                for key in dkeys:
+                    line[key] = line[key]/sum
+            else:
+                pass
+                print("tf2tnorm SUM<0 on list line => len %s :: line %s" % (len(line),line))
     return global_vect_l
 
 def inv_tf(global_vect_l):
@@ -114,27 +118,27 @@ def inv_tf(global_vect_l):
             line[key] = (1/line[key])
     return global_vect_l
 
-def tf2bin(global_vect_l, gterm_d,tf_threshold=0):
+def tf2bin(global_vect_l, freq_idx,tf_threshold=0):
     for line in global_vect_l:
         dkeys = line.keys()
         for key in dkeys:
-            if gterm_d[ key ][2] > tf_threshold:
+            if freq_idx[ key ] > tf_threshold:
                 line[key] = 1
             else:
                 line[key] = 0
     return global_vect_l
 
-def tf2hapax(global_vect_l, gterm_d,tf_threshold=2):
+def tf2hapax(global_vect_l, freq_idx,tf_threshold=2):
     for line in global_vect_l:
         dkeys = line.keys()
         for key in dkeys:
-            if gterm_d[ key ][2] < tf_threshold:
+            if freq_idx[ key ] < tf_threshold:
                 line[key] = 1
             else:
                 line[key] = 0
     return global_vect_l
 
-def glob_vect_l(genres, gterm_index, lower_case, pg_num=None, wpsl_genre={}, vectl_genre={}):
+def load_vects(genres, term_idx, lower_case, pg_num=None, wpsl_genre={}, vectl_genre={}):
     vectors_d = "/corpus_webpage_vectors/"
     base_filepath = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/"
     if pg_num == None:
@@ -146,7 +150,7 @@ def glob_vect_l(genres, gterm_index, lower_case, pg_num=None, wpsl_genre={}, vec
         global_wps_l = list()
         global_vect_l = list()
         for filename in vect_flist:
-            wps_l, vect_l = load_dict_l(filepath, filename, gterm_index, force_lower_case=lower_case, page_num=pg_num)
+            wps_l, vect_l = load_dict_l(filepath, filename, term_idx, force_lower_case=lower_case, page_num=pg_num)
             global_wps_l.extend( wps_l )
             global_vect_l.extend( vect_l )
             print("%s global_vect_l len: %s" % (g, len(global_vect_l)))
@@ -166,17 +170,17 @@ genres = [ "news" , "product_companies", "forum", "blogs", "wiki_pages"] # "acad
 base_filepath = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/"
 corpus_d = "/corpus_dictionaries/"
 ##################### CREAT GLOBAL INDEX FOR BOTH CORPUSSES ####################
-#gterm_index = dict()
+#term_index = dict()
 #for g in genres:
 #    filepath = base_filepath + g + corpus_d
 #    cdicts_flist = [files for path, dirs, files in os.walk(filepath)]
 #    cdicts_flist = cdicts_flist[0]
 #    corpus_dict = merge_to_global_dict(cdicts_flist, filepath, force_lower_case=lower_case)
 #    print("%s Dictionary has been loaded" % g )
-#    gterm_index = merge_global_dicts(gterm_index, corpus_dict)
+#    term_index = merge_global_dicts(term_index, corpus_dict)
 #    print("%s merged to Global Term Index" % g)
-#print( "Global Index Size: %s\n" % len(gterm_index))
-#gterm_index = merge_global_dicts(corpus_dict, corpus_dict2) #, corpus_dict3, corpus_dict4)
+#print( "Global Index Size: %s\n" % len(term_index))
+#term_index = merge_global_dicts(corpus_dict, corpus_dict2) #, corpus_dict3, corpus_dict4)
 
 genres = [ "news" , "product_companies", "forum", "blogs", "wiki_pages"] 
 base_filepath = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/"
@@ -187,19 +191,20 @@ for g in genres:
     filepath = base_filepath + g + corpus_d
     cdicts_flist = [files for path, dirs, files in os.walk(filepath)]
     cdicts_flist = cdicts_flist[0]
-    corpus_dict = merge_to_global_dict(cdicts_flist, filepath, force_lower_case=lower_case)
-    gterm_index = merge_global_dicts(corpus_dict) 
+    corpus_dict = load_n_merge_dcts(cdicts_flist, filepath, force_lower_case=lower_case)
+    term_idx, freq_idx = get_indexs(corpus_dict) 
     print("%s Dictionary has been loaded" % g )
-    print( "Global Index Size: %s\n" % len(gterm_index))
+    print( "Global Index Size: %s\n" % len(term_idx))
     #################### CREAT GLOBAL LIST OF WEBPAGE VECTORS OF ALL GENRES################
     wpsl_genre = dict() 
     vectl_genre = dict()
-    glob_vect_l( [ g ] , gterm_index, lower_case, None, wpsl_genre, vectl_genre)
+    #Load all vectors of Genre for which One-Class SVM will be trained for 
+    load_vects( [ g ] , term_idx, lower_case, None, wpsl_genre, vectl_genre)
     rest_genres = list()
     for rst_g in genres:
         if rst_g != g:
             rest_genres.append(rst_g)
-    glob_vect_l( rest_genres, gterm_index, lower_case, 1000, wpsl_genre, vectl_genre)
+    load_vects( rest_genres, term_idx, lower_case, 1000, wpsl_genre, vectl_genre)
     for i in [1,2,3]:
         ######
         TFREQ = 3
@@ -210,11 +215,11 @@ for g in genres:
         if i == 1:
             fobj.write("**** Inverse Binary - Hapax Legomenon ****\n")
             for grn in genres:
-                vectl_genre[ grn ] = tf2hapax(vectl_genre[ grn ], gterm_index,tf_threshold=TFREQ)
+                vectl_genre[ grn ] = tf2hapax(vectl_genre[ grn ], freq_idx,tf_threshold=TFREQ)
         elif i == 2:
             fobj.write("**** Binary ****\n")
             for grn in genres:
-                vectl_genre[ grn ] = tf2bin(vectl_genre[ grn ], gterm_index,tf_threshold=TFREQ)
+                vectl_genre[ grn ] = tf2bin(vectl_genre[ grn ], freq_idx,tf_threshold=TFREQ)
         elif i == 3:
             fobj.write("**** Normilised by Max Term ****\n")
             for grn in genres:
