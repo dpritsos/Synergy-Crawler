@@ -4,10 +4,10 @@
 
 import eventlet
 import codecs
-from multiprocessing import Process
-#from scgenrelerner_svmbased import *
+#from multiprocessing import Process
 
 def common_trms(webpg_vect_l):
+    """Extracting common terms found in list of term vectors"""
     set_vect = dict()
     #Create the Global Term Vector of Frequencies
     for pg_vect in webpg_vect_l:
@@ -29,6 +29,10 @@ def gterm_d_gen(webpg_vect_l): #for Backward compatibility
 #### Function for loading/handling dictionaries and dictionary lists from files ####
 
 def get_indexs(*gdicts): #Old Name: merge_global_dicts()
+    """Creates two dictionaries used as indices:
+       1. A Term Index of Rank (Rank is used as order indicator)
+       2. A Rank Index of frequencies i.e. the Rank of terms as a keys 
+          and the Frequency of term as value"""
     term_idx = dict()
     freq_idx = dict()
     gterm_list = list()
@@ -46,6 +50,7 @@ def get_indexs(*gdicts): #Old Name: merge_global_dicts()
     return (term_idx, freq_idx)
     
 def load_dct(filepath, filename, force_lower_case=False):
+    """ Loads a File to a Dictionary: the file has the form <term> => <frequency>"""
     try:
         f = codecs.open( filepath + str(filename), "r")
     except IOError, e:
@@ -69,6 +74,7 @@ def load_dct(filepath, filename, force_lower_case=False):
     return vect_dict  
 
 def load_n_merge_dcts(filelist, filepath=None, force_lower_case=False): #merge_to_global_dict() RENAMED
+    """Loads and merges all files of a directory and merges them for creating a global dictionary of sum frequency of common terms"""
     assert isinstance(filelist, (list, tuple))
     gpool = eventlet.GreenPool(10)
     filepaths= map( lambda x: filepath, range(len(filelist)) )
@@ -84,6 +90,9 @@ def load_n_merge_dcts(filelist, filepath=None, force_lower_case=False): #merge_t
     return global_vect
     
 def load_dict_l(filepath, filename, g_terms_d=None, force_lower_case=False, page_num=0):
+    """ Loads a list of dictionaries from files having the form <web_page> => \t<term>:<freq>\t ...\n
+        If a Term Index dictionary is given as an argument then the keys of the vectors are Rank numbers
+        common Term Index instead of the terms themselves"""
     try:
         f = codecs.open( filepath + str(filename), "r")
     except IOError, e:
@@ -132,12 +141,10 @@ def load_dict_l(filepath, filename, g_terms_d=None, force_lower_case=False, page
     #Return tuple of WebPages Vectors and     
     return (wps_l, vect_l)
 
+#This function it will be deprecated 
 def label_numerically(webpg_vect_l, Gset_terms):
     new_webpg_vect_l = list()
     for pg_vect in webpg_vect_l:
-        #enc_pg_vect = pg_vect.keys()
-        #for i in range(len(enc_pg_vect)):
-        #    enc_pg_vect[i] = enc_pg_vect[i].encode("utf-8")
         libsvm_pg_vect = dict()
         for pg_term in pg_vect:
             libsvm_pg_vect[ Gset_terms[pg_term] ] = pg_vect[pg_term]
@@ -149,7 +156,7 @@ def label_numerically(webpg_vect_l, Gset_terms):
 #### Functions for saving dictionary and list of dictionaries to file ####
 
 def save_dct(filename, records, filepath=None):
-    """save_dct():"""
+    """Saves a dictionary to a file in the form <key> => <value>"""
     try:
         #Codecs needed for saving string that are encoded in UTF8, but I do not need it because strings are already the Proper Encoding form
         f = codecs.open( filepath + filename, "w", "utf-8") #change "utf-8" to xcharset
@@ -164,15 +171,16 @@ def save_dct(filename, records, filepath=None):
     f.close()
     return True           
     
-def save_dct_lst(filename, records, index, filepath=None):
+def save_dct_lst(filename, records, lables, filepath=None):
+    """Saves a List of dictionaries in the form <label> => <key> : <value> """
     try:
         #Codecs needed for saving string that are encoded in UTF8, but I do not need it because strings are already the Proper Encoding form
         f = codecs.open( filepath + filename, "w", "utf-8") #change "utf-8" to xcharset
     except IOError:
         return None 
     try: 
-        for i in range(len(index)):
-            f.write(index[i] + " => ")
+        for i in range(len(lables)):
+            f.write(lables[i] + " => ")
             for rec in records[i]:
                 f.write( str(rec) + " : "  + str(records[i][rec]) + "\t") 
             f.write("\n") 
@@ -191,7 +199,7 @@ if __name__ == "__main__":
     print d1
     print d2
     
-    print merge_global_dicts(d1, d2)
+    print get_indexs(d1, d2)
     
 
     
