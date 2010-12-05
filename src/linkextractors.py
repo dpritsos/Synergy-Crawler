@@ -383,18 +383,13 @@ copy_reg.pickle(types.MethodType, _pickle_method, _unpickle_method)
 
 class LinkExtractorPPool(LinkExtractor):
     
-    def __init__(self, size=3, *args):
-        LinkExtractor.__init__(*args)
+    def __init__(self, base_url=None, size=3):
+        LinkExtractor.__init__(self)
+        if base_url:
+            self.set_base(base_url)
         #Thread pool definition
         self.__pl_size = size
         self.__ppool = Pool(size)
-        #ETREE queue for the parsed xhtml(s) to be stored
-        self.__site_links_q = pQueue()
-        self.__media_links_q = pQueue()
-        self.__scripts_links_q = pQueue()
-        self.__undefined_links_q = pQueue()
-        #Define a default queue returned with the iterator or callable instance of this Class  
-        self.__call_q = self.__etree_q 
     
     def __iter__(self):
         return self
@@ -402,7 +397,7 @@ class LinkExtractorPPool(LinkExtractor):
     def next(self):
         try:
             print "GET ITER"
-            return self.__call_q.get(timeout=1) #timeout maybe should be trimmed 
+            return self.__all_links.get(timeout=1) #timeout maybe should be trimmed 
         except Queue.Empty:
             print "EMPTY ITER" 
             raise StopIteration 
@@ -411,7 +406,7 @@ class LinkExtractorPPool(LinkExtractor):
         """Be careful: class as 'Callable' returns etrees queue, by default, 
         or the one defined but the proper function bellow"""
         try:
-            return self.__call_q.get(timeout=1) #timeout maybe should be trimmed
+            return self.__all_links.get(timeout=1) #timeout maybe should be trimmed
         except Queue.Empty:
             return False 
     
@@ -470,12 +465,15 @@ if __name__ == "__main__":
     socket = urllib2.urlopen(rq)
     
     #URL to other Sites extraction
-    link_extro = LinkExtractor(base_url="http://www.extremepro.gr/")
-    
+    #link_extro = LinkExtractor(base_url="http://www.extremepro.gr/")
+    link_extro = LinkExtractorPPool(base_url="http://www.extremepro.gr/")
     src = socket.read()
     
     #String-Source as input
-    #link_extro.feed( src )
+    link_extro.url_feed( src )
+    print link_extro.get_url()
+    
+    
     #List of Sources as input
     #link_extro.l_feed( [src] )
     #Dictionary of sources & metadata as input

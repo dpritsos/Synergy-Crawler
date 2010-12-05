@@ -166,9 +166,6 @@ print("START")
 
 lower_case = True
 
-genres = [ "news" , "product_companies", "forum", "blogs", "wiki_pages"] # "academic", 
-base_filepath = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/"
-corpus_d = "/corpus_dictionaries/"
 ##################### CREAT GLOBAL INDEX FOR BOTH CORPUSSES ####################
 #term_index = dict()
 #for g in genres:
@@ -182,8 +179,9 @@ corpus_d = "/corpus_dictionaries/"
 #print( "Global Index Size: %s\n" % len(term_index))
 #term_index = merge_global_dicts(corpus_dict, corpus_dict2) #, corpus_dict3, corpus_dict4)
 
-genres = [ "news" , "product_companies", "forum", "blogs", "wiki_pages"] 
+genres = [ "news", "product_companies", "forum", "blogs", "wiki_pages" ] # "academic", 
 base_filepath = "/home/dimitrios/Documents/Synergy-Crawler/saved_pages/"
+corpus_d = "/corpus_dictionaries/"
 for g in genres:
     fobj = open( base_filepath + g + "_vs_all.eval", "w" )
     fobj.write("---- for Genre= " + g + " ----\n")
