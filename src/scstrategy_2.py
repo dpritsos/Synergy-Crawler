@@ -49,7 +49,6 @@ if __name__ == '__main__':
     
     News2 = ["http://www.eweek.com",
              "http://www.sfgate.com",
-             "http://www.pcmag.com",
              "http://www.informationweek.com",
              "http://www.technewsworld.com",
              "http://www.space-travel.com",
@@ -83,8 +82,7 @@ if __name__ == '__main__':
              "http://www.product-reviews.net",
              "http://www.businessweek.com",
              "http://news.morningstar.com",
-             "http://www.ft.com",
-             "http://www.forbes.com" ]
+             "http://www.ft.com" ]
     
     
     #Seeds.append( "http://www.insomnia.gr/" )
@@ -103,7 +101,6 @@ if __name__ == '__main__':
               "http://blogs.howstuffworks.com",
               "http://blogs.baltimoreravens.com",
               "http://blogs.telegraph.co.uk",
-              "http://blogs.abcnews.com",
               "http://kevin.lexblog.com",
               "http://segullah.org",
               "http://blogs.oxfam.org",
@@ -118,7 +115,6 @@ if __name__ == '__main__':
               "http://elementary-school.blogspot.com",
               "http://blog.newsok.com/",
               "http://blogs.mybandra.com/",
-              "http://blogs.adobe.com",
               "http://blogs.cornellcollege.edu",
               "http://weblogs.sun-sentinel.com",
               "http://nabbschoolblogs.net",
@@ -131,8 +127,6 @@ if __name__ == '__main__':
               "http://blogpreston.co.uk" ]
     
     Blogs3 = ["http://ormsbycinemainsane.blogspot.com",
-              "http://blog.mapquest.com",
-              "http://www.blogcatalog.com ",
               "http://blogs.forward.com",
               "http://pauledie.blogspot.com",
               "http://www.blogcatalog.com",
