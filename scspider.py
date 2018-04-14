@@ -22,29 +22,6 @@ from linkextractors import LinkExtractorTPool
 import time
 
 
-def fetchsrc(url_req):
-    htmlsrc = None
-    socket = None
-    charset = None
-    url_resp = None
-
-    try:
-        rq = urllib2.Request(
-            url_req,
-            headers={'User-Agent': 'Mozilla/5.0 (X11; U; Linux x86_64; en-GB; rv:1.9.1.9)'}
-        )
-        socket = urllib2.urlopen(rq)
-        htmlsrc = socket.read()
-        charset = socket.info().getparam('charset')
-        url_resp = socket.geturl()
-        socket.close()
-    except Exception as e:
-        print("FETCH ERROR(urllib2): %s - URL: %s" % (e, url_req))
-
-    # Return a tuple of the HTML source, the character encoding of this source, and its URL
-    return (htmlsrc, charset, url_req, url_resp)
-
-
 class SCSpider(Process):
     """SCSpider:"""
 
